@@ -310,30 +310,3 @@ class G1PickupFloor(TaskMj):
 
         valid = is_straight & is_centered & is_standing
         return valid
-    
-    def randomize_initial_state(self):
-        scale_q = np.full((self.Nq,), self.cfg_scene.scale_q)
-        scale_v = np.full((self.Nv,), self.cfg_scene.scale_v)
-
-        scale_q[:7] /= 10.
-        scale_v[:6] /= 10.
-        scale_q[-7:] = 0.
-        scale_v[-6:] = 0.
-
-        scale_q[G1._25DoF_ObjFloor.IDX_WAIST+7:] *= self.upper_body_scale
-        obj_qpos_id = G1._25DoF_ObjFloor.IDX_BOX_POS + G1._25DoF_ObjFloor.IDX_BOX_QUAT
-        scale_q[obj_qpos_id] = 0.
-        scale_v[-6:] = 0.
-
-        return super().set_random_initial_state(
-            self.cfg_scene.keyframe,
-            scale_q,
-            scale_v,
-            is_floating_base=True,
-            obj_qpos_id=obj_qpos_id,
-            N_rollout_steps=150,
-            obj_x_range=self.cfg_scene.obj_x_range,
-            obj_y_range=self.cfg_scene.obj_y_range,
-            obj_w_range=self.cfg_scene.obj_w_range,
-            )
-    

@@ -208,24 +208,3 @@ class G1Gait(TaskMj):
             quadratic_cost_nb,
             weights=w_u_torque
             )
-
-
-    def are_initial_states_valid(self, states, obs):
-        Z_MIN = 0.6
-        QUAT_DIST_MAX = 0.4
-        TORSO_XY_MAX_DIST = 0.07
-
-        is_standing = states[:, 2] > Z_MIN
-
-        torso_xyz = self.get_sensor_data(obs, G1.Sensors.TORSO_POS)
-        is_centered = np.abs(torso_xyz[:, 0]) < TORSO_XY_MAX_DIST
-        is_centered &= np.abs(torso_xyz[:, 1]) < TORSO_XY_MAX_DIST
-
-        quat_ref = np.array([1., 0., 0., 0.]).reshape(1, 4)
-        quat = states[:, 3:7].reshape(-1, 1, 4)
-        w = np.full_like(quat_ref, 1.)
-        quat_dist = quaternion_dist_nb(quat, quat_ref, w)
-        is_straight = quat_dist < QUAT_DIST_MAX
-
-        valid = is_straight & is_centered & is_standing
-        return valid
