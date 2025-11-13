@@ -56,7 +56,7 @@ def split_x_traj(xml_path, x_traj : Array) -> Dict[str, Array]:
         if n_dim_traj == 2:
             id_ = np.atleast_2d(id)
         elif n_dim_traj == 3:
-            id_ = np.atleast_3d(id)
+            id_ = id[None, None, :]
         extracted_data[name] = np.take_along_axis(x_traj, id_, axis=-1)
 
     return extracted_data
