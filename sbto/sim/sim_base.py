@@ -5,7 +5,7 @@ from typing import Any, Tuple, Callable, Optional
 from scipy.interpolate import interp1d
 from functools import partial
 
-from sbto.sim.action_scaling import AVAILABLE_SCALING
+from sbto.sim.action_scaling import Scaling
 
 Array = npt.NDArray[np.float64]
 
@@ -18,7 +18,7 @@ class SimRolloutBase(ABC):
         T: int,
         Nknots: int = 0,
         interp_kind: str = "linear",
-        scaling_kind: str = "",
+        scaling: Optional[Scaling] = None,
         ):
         # problem size
         self.T = T
@@ -43,11 +43,7 @@ class SimRolloutBase(ABC):
         self.q_nom = np.zeros((self.Nu, ))
         self.q_range = np.ones_like(self.q_nom)
         # no scaling by default
-        self.scaling_kind = scaling_kind
-        if not self.scaling_kind in AVAILABLE_SCALING:
-            self.f_rescale = lambda u_knots : u_knots.reshape(-1, self.Nknots, self.Nu)
-        else:
-            self.set_scaling()
+        self.scaling = scaling
 
     def set_act_limits(self, q_min: Array, q_max: Array, q_nom: Optional[Array] = None):
         self.q_range = q_max - q_min
@@ -56,24 +52,8 @@ class SimRolloutBase(ABC):
         self.q_min = q_min
         self.q_max = q_max
         self.q_nom = q_nom if q_nom is not None else (q_max - q_min) / 2.
-        self.set_scaling()
-
-    def set_scaling(self) -> Callable[[Any], Any]:
-        if self.scaling_kind not in AVAILABLE_SCALING:
-            raise ValueError(
-                f"Scaling '{self.scaling_kind}' not available. "
-                f"Choose from: {', '.join(AVAILABLE_SCALING.keys())}"
-            )
-        _scale = partial(
-            AVAILABLE_SCALING[self.scaling_kind],
-            q_min=self.q_min,
-            q_max=self.q_max,
-            q_nom=self.q_nom,
-        )
-        # Make shure act is reshaped
-        self.f_rescale = lambda act: _scale(
-            act.reshape(-1, self.Nknots, self.Nu)
-            )
+        if self.scaling:
+            self.scaling.set_range(self.q_min, self.q_max, self.q_nom)
 
     def _check_state_shape(self, x: Array) -> None:
         valid_shape = (self.Nx,)
@@ -119,7 +99,10 @@ class SimRolloutBase(ABC):
         Rollout the dynamics with the given control knots u_knots [-1, Nknots, Nu].
         Interpolate and rescale the knots to the desired joint range.
         """
-        u_traj = self.interpolate(self.f_rescale(u_knots))
+        u_knots = u_knots.reshape(-1, self.Nknots, self.Nu)
+        if self.scaling:
+            u_knots = self.scaling(u_knots) 
+        u_traj = self.interpolate(u_knots)
         self._check_u_traj_shape(u_traj)
         return self._rollout_dynamics(u_traj, with_x0)
     

@@ -60,9 +60,12 @@ sim:
     Nknots: 15
     keyframe_x0: knees_bent_wrist_yaw_90deg
     interp_kind: quadratic
-    scaling_kind: asymmetric
     Nthread: 20
     _chunk_size: 2
+  scaling:
+    _target_: sbto.sim.action_scaling.Scaling
+    name: nominal
+    clip: True
 
   # === MuJoCo Scene ===
   mj_scene:

@@ -1,13 +1,14 @@
 import numpy as np
 import numpy.typing as npt
 from mujoco import rollout
-from typing import Tuple
+from typing import Tuple, Optional
 import copy
 from dataclasses import dataclass
 from multiprocessing import cpu_count
 
 from sbto.sim.sim_base import SimRolloutBase, Array
 from sbto.sim.scene_mj import MjScene
+from sbto.sim.action_scaling import Scaling
 
 IntArray = npt.NDArray[np.int64]
 
@@ -54,11 +55,11 @@ class SimMjRollout(SimRolloutBase):
         self,
         mj_scene: MjScene,
         cfg: ConfigMjRollout,
+        scaling: Optional[Scaling] = None
         ):
 
         self.cfg = cfg
         self.mj_scene = mj_scene
-
         super().__init__(
             self.mj_scene.Nq,
             self.mj_scene.Nv,
@@ -66,7 +67,7 @@ class SimMjRollout(SimRolloutBase):
             cfg.T,
             cfg.Nknots,
             cfg.interp_kind,
-            cfg.scaling_kind,
+            scaling,
             )
         
         # Set initial state
