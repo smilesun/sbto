@@ -48,7 +48,7 @@ sim:
     _chunk_size: 2
   scaling:
     _target_: sbto.sim.action_scaling.Scaling
-    name: asymmetric
+    name: nominal
     clip: True
 
   # === MuJoCo Scene ===

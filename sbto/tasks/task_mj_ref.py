@@ -1,10 +1,8 @@
 import numpy as np
-import mujoco
-from typing import Tuple, Union, Optional, List
+from typing import Union, Optional, List
 
 from sbto.sim.sim_mj_rollout import SimMjRollout
-from sbto.sim.scene_mj import MjScene
-from sbto.tasks.task_mj import OCPBase, TaskMj, Array, CostFn, IntArray
+from sbto.tasks.task_mj import TaskMj, Array, CostFn, IntArray
 from sbto.utils.extract_ref import ReferenceMotion
 
 class TaskMjRef(TaskMj):
@@ -12,7 +10,6 @@ class TaskMjRef(TaskMj):
                  sim: SimMjRollout,
                  ):
         super().__init__(sim)
-        self.mj_scene : MjScene = sim.mj_scene
         self.ref : ReferenceMotion = None
 
     def init_reference(
@@ -50,7 +47,7 @@ class TaskMjRef(TaskMj):
             raise ValueError(f"Invalid state index. Above {self.mj_scene.Nx}.")
 
         ref_values = self.ref.x[:self.T-1, idx_x]
-        ref_values_terminal = self.ref.x[self.T, idx_x]
+        ref_values_terminal = self.ref.x[self.T-1, idx_x]
 
         super().add_state_cost(
             name,
@@ -77,22 +74,23 @@ class TaskMjRef(TaskMj):
 
         # Set cost name and ref values
         if not isinstance(sensor_name, str):
-            ref_values = []
-            ref_values_terminal = []
+            ref_values = np.empty((self.T-1, len(idx_o)))
+            ref_values_terminal = np.empty((1, len(idx_o)))
 
+            i = 0
             for sns_name in sensor_name:
-                ref_values.append([self.ref.data[sns_name][:self.T-1, :]])
-                ref_values_terminal.append([self.ref.data[sns_name][self.T, :]])
-
-            ref_values = np.asarray(ref_values).reshape(self.T-1, -1)
-            ref_values_terminal = np.asarray(ref_values_terminal).reshape(1, -1)
+                data = self.ref.data[sns_name]
+                n_sns = data.shape[-1]
+                ref_values[:, i:i+n_sns] = data[:self.T-1, :]
+                ref_values_terminal[:, i:i+n_sns] = data[self.T-1, :]
+                i += n_sns
 
             name = "+".join(sensor_name)
         else:
             name = sensor_name
 
             ref_values = self.ref.data[sensor_name][:self.T-1, :]
-            ref_values_terminal = self.ref.data[sensor_name][self.T, :]
+            ref_values_terminal = self.ref.data[sensor_name][self.T-1, :]
 
         name_suffix = '_'.join(map(str, idx_o.tolist()))
         name = name + '_' + name_suffix

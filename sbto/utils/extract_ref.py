@@ -155,6 +155,10 @@ class ReferenceMotion:
         self.speedup = speedup
         self.z_offset = z_offset
 
+        mj_model = mujoco.MjModel.from_xml_path(xml_path)
+        act_joint_ids = mj_model.actuator_trnid[:, 0]
+        self.act_qpos_adr = mj_model.jnt_qposadr[act_joint_ids] 
+
         self.data = load_reference(
             ref_motion_path,
             xml_path,
@@ -261,7 +265,10 @@ class ReferenceMotion:
     @property
     def act_qpos0(self):
         return self.qpos[0, self.act_qpos_adr]
-
+    
+    @property
+    def act_qpos(self):
+        return self.qpos[:, self.act_qpos_adr]
 
 if __name__ == "__main__":
     import mujoco

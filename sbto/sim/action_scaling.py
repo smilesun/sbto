@@ -156,5 +156,5 @@ class Scaling():
     def __call__(self, act):
         return self.scaler.scale(act)
     
-    def inv(self, q):
+    def inverse(self, q):
         return self.scaler.inverse(q)

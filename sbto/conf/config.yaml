@@ -5,3 +5,4 @@ defaults:
 
 description: ""
 save_fig: true
+init_knots_from_ref: false

@@ -59,10 +59,6 @@ class G1PickPlaceTableRef(TaskMjRef):
             cfg.z_offset,
         )
 
-        LEFT_H = "left_palm_position"
-        RIGHT_H = "right_palm_position"
-        LEFT_H_QUAT = "left_palm_orientation"
-        RIGHT_H_QUAT = "right_palm_orientation"
         sensor_names = [
             G1.Sensors.TORSO_POS,
             G1.Sensors.TORSO_QUAT,
@@ -73,6 +69,9 @@ class G1PickPlaceTableRef(TaskMjRef):
         ]
         self.ref.add_sensor_data(sim.mj_scene.mj_model, sensor_names)
         sim.set_initial_state(self.ref.x0)
+        q_min = sim.mj_scene.q_min
+        q_max = sim.mj_scene.q_max
+        sim.set_act_limits(q_min, q_max)
 
         # --- G1 costs ---
         self.add_state_cost_from_ref(
@@ -92,7 +91,7 @@ class G1PickPlaceTableRef(TaskMjRef):
         self.add_state_cost_from_ref(
             "joint_vel",
             quadratic_cost_nb,
-            sim.mj_scene.act_dofadr,
+            sim.mj_scene.act_vel_adr,
             weights=cfg.joint_vel_weight,
             weights_terminal=cfg.joint_vel_weight,
         )
