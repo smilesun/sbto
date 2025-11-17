@@ -4,6 +4,8 @@ import numpy as np
 from scipy.interpolate import interp1d
 from typing import List
 
+from sbto.utils.finite_diff import finite_diff_qpos_traj, finite_diff_quat_traj
+
 def compute_time_from_fps(fps, N):
     return np.arange(N) / fps
 
@@ -12,7 +14,6 @@ def quatxyzw2quatwxyz(quat):
     new_quat[:, 0] = quat[:, -1]
     new_quat[:, 1:] = quat[:, :3]
     return new_quat
-
 
 def normalize_quat(quat):
     quat /= np.linalg.norm(quat, axis=-1, keepdims=True)
@@ -29,7 +30,15 @@ def concatenate_full_state(data):
                 data["object_rot"],
             ), axis=-1
         )
-        qvel = np.zeros((qpos.shape[0], qpos.shape[-1] - 2))
+        qvel = np.concatenate(
+            (
+                data["root_v"],
+                data["root_w"],
+                data["dof_v"],
+                data["object_v"],
+                data["object_w"],
+            ), axis=-1
+        )
 
     else:
         qpos = np.concatenate(
@@ -39,11 +48,16 @@ def concatenate_full_state(data):
                 data["dof_pos"],
             ), axis=-1
         )
-        qvel = np.zeros((qpos.shape[0], qpos.shape[-1] - 1))
+        qvel = np.concatenate(
+            (
+                data["root_v"],
+                data["root_w"],
+                data["dof_v"],
+            ), axis=-1
+        )
 
     x = np.concatenate((qpos, qvel), axis=-1)
     return qpos, qvel, x
-
 
 def interpolate_data(data, dt: float):
     t_interp = np.arange(0, data["time"][-1], dt)
@@ -61,6 +75,17 @@ def interpolate_data(data, dt: float):
                 data[k] = normalize_quat(data[k])
 
     data["time"] = t_interp
+    return data
+
+def compute_vel_from_pos(data, dt: float):
+    if "object_rot" in data and "object_root_pos" in data:
+        data["object_v"] = finite_diff_qpos_traj(data["object_root_pos"], dt)
+        data["object_w"] = finite_diff_quat_traj(data["object_rot"], dt)
+    
+    data["root_v"] = finite_diff_qpos_traj(data["root_pos"], dt)
+    data["root_w"] = finite_diff_quat_traj(data["root_rot"], dt)
+    data["dof_v"] = finite_diff_qpos_traj(data["dof_pos"], dt)
+
     return data
 
 def extract_sensor_data(mj_model, state_traj, sensor_name: str):
@@ -123,6 +148,8 @@ def load_reference(
     dt_interp = mj_model.opt.timestep
     if dt_interp > 0:
         data = interpolate_data(data, dt_interp)
+
+    data = compute_vel_from_pos(data, dt_interp)
 
     if z_offset != 0:
         data["root_pos"][:, 2] -= z_offset
