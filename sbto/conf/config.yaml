@@ -8,3 +8,9 @@ save_fig: true
 init_knots_from_ref: false
 multiple_shooting: false
 warm_start_rundir: ""
+
+### Data processing
+data:
+  dataset_dir: ""
+  N_top: 1000
+  min_it: 0
