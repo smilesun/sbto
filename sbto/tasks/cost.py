@@ -3,16 +3,6 @@ import numpy.typing as npt
 from numba import njit, prange
 
 Array = npt.NDArray[np.float64]
-
-def quadratic_cost(var: Array, ref: Array, weights: Array) -> float:
-    return np.sum(weights[None, ...] * (var - ref[None, ...]) ** 2, axis=(-1, -2))
-
-def contact_cost(cnt_status_rollout, cnt_plan, weights) -> float:
-    cnt_status_rollout[cnt_status_rollout > 1] = 1
-    return np.sum(weights[None, ...] * np.float32(cnt_status_rollout != cnt_plan[None, ...]), axis=(-1, -2))
-
-def quat_dist(var, ref, weights) -> float:
-    return np.sum(weights[:, 0] * (1.0 - np.square(np.sum(var * ref[None, ...], axis=-1))), axis=(-1))
     
 @njit(parallel=True, fastmath=True, cache=True)
 def quadratic_cost_nb(var, ref, weight):
@@ -26,7 +16,7 @@ def quadratic_cost_nb(var, ref, weight):
                 total += weight[t, i] * diff * diff
         result[n] = total
     return result
-
+    
 @njit(parallel=True, fastmath=True, cache=True)
 def quaternion_dist_nb(var, ref, weights):
     """
@@ -63,6 +53,7 @@ def hamming_dist_nb(cnt_rollout, cnt_plan, weights):
         cnt_rollout : (N, T, C) array, contact states (0, 1, maybe >1)
         cnt_plan           : (T, C) array, desired contact pattern (0 or 1)
         weights            : (T, C) array of float32 weights
+
     Returns:
         cost : (N,) array of float32
     """

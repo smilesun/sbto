@@ -1,43 +1,55 @@
-_target_: sbto.tasks.g1.move_large_box_ref.G1MoveLargeBoxRef
+_target_: sbto.tasks.g1.move_large_box_ref.G1MoveLargeBoxObjRef
 
 cfg:
-  _target_: sbto.tasks.g1.move_large_box_ref.ConfigG1MoveLargeBoxRef
+  _target_: sbto.tasks.g1.move_large_box_ref.ConfigG1MoveLargeBoxObjRef
 
-  ref_motion_path: "./sbto/tasks/g1/motion/move_large_box_no_obk.pkl"
-  t0: 0.0
-  speedup: 1.1
-  z_offset: 0.024
+  ref_motion_path: "./sbto/tasks/g1/motion/sub3_largebox_005_original.pkl"
+  t0: 0. #0.22
+  speedup: 1.25
+  z_offset: 0.015
+
+  t_hand_cnt_before_lift: 0.2
+  t_hand_cnt_after_place: 0.25
 
   # --- State costs ---
-  joint_pos_weight: 0.1
-  joint_vel_weight: 0.05
+  joint_pos_weight: 0.3
+  joint_vel_weight: 0.01
   base_pos_weight: 5.0
   base_quat_weight: 1.0
 
   # --- Torso pose/vel ---
   torso_pos_weight: 30.0
-  torso_quat_weight: 1.0
-  torso_quat_weight_terminal: 10.0
+  torso_quat_weight: 2.0
+  torso_quat_weight_terminal: 2.0
   torso_linvel_weight: 1.0
-  torso_linvel_weight_terminal: 10.0
+  torso_linvel_weight_terminal: 1.0
   torso_angvel_weight: 1.0
-  torso_angvel_weight_terminal: 10.0
-
-  # --- Obj pose cost ---
-  obj_pos_weight: 30.0
-  obj_quat_weight: 10.0
-
-  # --- Hand pose cost ---
-  hand_position: 3.0
-  hand_orientation: 0.1
+  torso_angvel_weight_terminal: 1.0
 
   # --- Foot pose cost ---
-  foot_position: 10.0
+  foot_position: 15.0
   foot_orientation: 0.1
 
   # --- Feet Contact cost ---
-  contact_feet_weight: 1.0
+  contact_feet_weight: 0.
   contact_force_feet_weight: 1.0e-6
+
+  # --- Hand pose cost ---
+  hand_position: 20.0
+  hand_orientation: 0.0
+
+  # --- Obj pose cost ---
+  obj_pos_weight: 20.
+  obj_quat_weight: 2.
+  obj_v_weight: 1.
+  obj_w_weight: 1.
+
+  # --- Obj/hands Contact cost ---
+  contact_obj_weight: 0.
+  contact_hands_weight: 0.
+
+  collision_obj_thigh: 0.
+
 
 
 # === Rollout simulator ===
@@ -45,10 +57,10 @@ sim:
   _target_: sbto.sim.sim_mj_rollout.SimMjRollout
   cfg:
     _target_: sbto.sim.sim_mj_rollout.ConfigMjRollout
-    T: 300
-    Nknots: 15
-    interp_kind: cubic
-    Nthread: 20
+    T: 500
+    Nknots: 25
+    interp_kind: pchip
+    Nthread: -1
     _chunk_size: 2
   scaling:
     _target_: sbto.sim.action_scaling.Scaling
@@ -61,5 +73,32 @@ sim:
     cfg:
       _target_: sbto.sim.scene_mj.ConfigMjScene
       xml_scene_path: sbto/models/unitree_g1/scene_mjx_29dof_no_hands.xml
-      xml_sensors_path: sbto/models/unitree_g1/sensors/tracking_no_obj.xml
-      xml_contact_pairs_path: sbto/models/unitree_g1/contact_pairs/minimal.xml
+      xml_sensors_path: sbto/models/unitree_g1/sensors/tracking_w_obj.xml
+      xml_contact_pairs_path: sbto/models/unitree_g1/contact_pairs/with_obj.xml
+      add_body:
+      
+          largebox:
+            type: box
+            pos: [0.4, 0.0, 0.1]
+            size: [0.1, 0.1, 0.1]
+            euler: [0., 0., 0.]
+            group: 3
+            contype: 0
+            conaffinity: 0
+            freejoint: true
+
+          obj:
+            type: box
+            pos: [0.01, 0.0, 0.03]
+            size: [0.165, 0.155, 0.16]
+            euler: [3.05, 0.11, 1.11]
+            mass: 0.5
+            rgba: [0.3, 0.3, 0.3, 1.0]
+            group: 1
+            priority: 0
+            condim: 3
+            contype: 0
+            conaffinity: 1
+            solref: [0.008, 1.0]
+            friction: [0.8, 0.005, 0.0001]
+            bodyname: largebox

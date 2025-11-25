@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Tuple, Callable, Optional
 from scipy.interpolate import interp1d, PchipInterpolator
 from functools import partial
+import time
 
 from sbto.sim.action_scaling import Scaling
 
@@ -78,7 +79,6 @@ class SimRolloutBase(ABC):
     def set_initial_state(self, x_0: Array) -> None:
         self.x_0[:] = x_0
 
-
     def interpolate(self, u_knots, T_end: int = 0):
         """
         interpolate u_knots [-1, Nknots, Nu] in an array of shape [-1, T, Nu]
@@ -119,9 +119,24 @@ class SimRolloutBase(ABC):
         """
         u_knots = u_knots.reshape(-1, self.Nknots, self.Nu)
         if self.scaling:
-            u_knots = self.scaling(u_knots) 
+            u_knots = self.scaling(u_knots)
         u_traj = self.interpolate(u_knots)
         self._check_u_traj_shape(u_traj)
+        return self._rollout_dynamics(u_traj, with_x0)
+    
+    def rollout_t_steps(self, u_knots : Array, T_end: int = 0, with_x0: bool = False) -> Tuple[Array, Array, Array]:
+        """
+        Rollout the dynamics with the given control knots u_knots [-1, Nknots, Nu].
+        Interpolate and rescale the knots to the desired joint range.
+        """
+        if T_end <= 0:
+            T_end = self.T
+
+        u_knots = u_knots.reshape(-1, self.Nknots, self.Nu)
+        if self.scaling:
+            u_knots = self.scaling(u_knots)
+
+        u_traj = self.interpolate(u_knots, T_end)
         return self._rollout_dynamics(u_traj, with_x0)
     
     def rollout_traj(self, u_traj : Array, with_x0: bool = False) -> Tuple[Array, Array, Array]:
