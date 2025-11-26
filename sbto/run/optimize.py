@@ -20,6 +20,17 @@ def compute_cost(
     ):
     return task.cost(*sim.rollout(u_knots)[1:])
 
+def compute_cost_t_end(
+    u_knots,
+    sim: SimRolloutBase,
+    task: OCPBase,
+    t_end: int,
+    **kwargs
+    ):
+    # Rescale cost based on the number of timesteps
+    scale = sim.T / t_end
+    return scale * task.cost(*sim.rollout_t_steps(u_knots, t_end)[1:])
+
 def compute_cost_multiple_shooting(
     u_knots,
     sim: SimRolloutBase,
@@ -29,46 +40,11 @@ def compute_cost_multiple_shooting(
     x_shooting = task.ref.x[sim.t_knots]
     return task.cost(*sim.rollout_multiple_shooting(u_knots, x_shooting)[1:])
 
-def compute_cost_cumul(
-    u_knots,
-    sim: SimRolloutBase,
-    task: OCPBase,
-    solver: SamplingBasedSolver,
-    cumul_mod: Array,
-    **kwargs,
-    ):
-    # s = time.time()
-    task.update_mod(cumul_mod)
-    solver.update_mod(cumul_mod[sim.t_knots])
-    # e = time.time()
-    # print("update_mod", e-s)
-
-    id_zero = np.where(cumul_mod == 0)[0]
-    if len(id_zero) == 0:
-        return compute_cost(u_knots, sim, task)
-
-    T_end = id_zero[0]-1
-    # print("T_end", T_end)
-    # print("t_knots", sim.t_knots)
-    # print("cumul_mod, t_knots", cumul_mod[sim.t_knots])
-
-    # s = time.time()
-    # r = sim.rollout_t_steps(u_knots, T_end)
-    # e = time.time()
-    # print("rollout_t_steps", e-s)
-    # s = time.time()
-    # c = task.cost(*r[1:])
-    # e = time.time()
-    # print(c[:10])
-    # print("cost", e-s)
-    return task.cost(*sim.rollout_t_steps(u_knots, T_end)[1:])
-
 def _optimize(
     sim: SimRolloutBase,
     task: OCPBase,
     solver: SamplingBasedSolver,
     compute_cost_fn: Any,
-    incremental: bool = False,
     init_state_solver: Optional[SolverState] = None,
     ) -> Tuple[SolverState, Array, Array]:
     all_costs = []
@@ -80,32 +56,11 @@ def _optimize(
         solver.state = copy.deepcopy(init_state_solver)
 
     start = time.time()
-
-    cumul_mod = np.ones(sim.T)
-    try:
-        task.update_mod(cumul_mod)
-        solver.update_mod(cumul_mod[sim.t_knots])
-    except:
-        pass
-
-    all_knots_optimized = True
-    reset_best_knots_all = True
-
-    for it in pbar:
-        
-        if incremental:
-            cumul_mod = step_mod(it, solver.cfg.N_it, sim.T, Nknots=sim.Nknots)
-            all_knots_optimized = np.all(cumul_mod == 1.)
-
-            # Reset best knots when all knots are optimized
-            if reset_best_knots_all and all_knots_optimized:
-                solver.state.min_cost_all = np.inf
-                reset_best_knots_all = False
-
+    for _ in pbar:
         samples = solver.get_samples()
         all_samples.append(samples.copy())
 
-        costs = compute_cost_fn(samples, sim, task, solver=solver, cumul_mod=cumul_mod)
+        costs = compute_cost_fn(samples, sim, task)
         all_costs.append(costs)
 
         solver.update(samples, costs)
@@ -136,7 +91,6 @@ def optimize_single_shooting(
         task,
         solver,
         compute_cost,
-        False,
         init_state_solver, 
     )
 
@@ -151,30 +105,16 @@ def optimize_mutiple_shooting(
         task,
         solver,
         compute_cost_multiple_shooting,
-        False,
         init_state_solver,
     )
-
-# def optimize_incremental_opt(
-#     sim: SimRolloutBase,
-#     task: OCPBase,
-#     solver: SamplingBasedSolver,
-#     init_state_solver: Optional[SolverState] = None 
-#     ) -> Tuple[SolverState, Array, Array]:
-#     return _optimize(
-#         sim,
-#         task,
-#         solver,
-#         compute_cost_cumul,
-#         True,
-#         init_state_solver,
-#     )
 
 def optimize_incremental_opt(
     sim: SimRolloutBase,
     task: OCPBase,
     solver: SamplingBasedSolver,
-    init_state_solver: Optional[SolverState] = None 
+    init_state_solver: Optional[SolverState] = None,
+    N_max_it_per_knots: int = 50,
+    min_std_next: float = 1.e-2,
     ) -> Tuple[SolverState, Array, Array]:
     all_costs = []
     all_samples = []
@@ -184,58 +124,47 @@ def optimize_incremental_opt(
 
     start = time.time()
 
-    cumul_mod = np.ones(sim.T)
-    try:
-        task.update_mod(cumul_mod)
-        solver.update_mod(cumul_mod[sim.t_knots])
-    except:
-        pass
-
-    all_knots_optimized = True
     reset_best_knots_all = True
-
-    N_max_it_per_knots = 50
-    min_std_next = 1.0e-2
-    
-    def get_max_diag_std(solver):
-        return np.max(np.diag(solver.state.cov * solver.alpha_cov))
-    
-    Nmax_it = N_max_it_per_knots * sim.Nknots
-    pbar = trange(Nmax_it, desc="Optimizing", leave=True)
+    pbar_knots = trange(sim.Nknots-1, desc="Optimizing", leave=True)
     pbar_postfix = {}
-    cumul_mod = np.zeros(sim.T)
 
-    for N_knots_to_opt in range(1, sim.Nknots): # start with first 2 knots
+    for N_knots_to_opt in pbar_knots:
+        N_knots_to_opt += 1  # starts with first 2 knots
         nit = 0
+        max_std_diag = np.inf
+        pbar_knots.set_description_str(f"Opt. first {N_knots_to_opt+1} knots")
+        pbar_it = trange(N_max_it_per_knots, leave=False)
 
         t_end = sim.t_knots[N_knots_to_opt] + 1
-        cumul_mod[:t_end] = 1.
-        task.update_mod(cumul_mod)
-        solver.update_mod(cumul_mod[sim.t_knots])
-        all_knots_optimized = np.all(cumul_mod == 1.)
+        N_var_to_opt = (N_knots_to_opt + 1) * sim.Nu
+        solver.opt_first_dim(N_var_to_opt)
 
-        while min_std_next < get_max_diag_std(solver) and nit < N_max_it_per_knots:
-            nit += 1
-
+        all_knots_optimized = N_knots_to_opt == sim.Nknots-1
+        while min_std_next < max_std_diag and nit < N_max_it_per_knots:
             # Reset best knots when all knots are optimized
             if reset_best_knots_all and all_knots_optimized:
                 solver.state.min_cost_all = np.inf
                 reset_best_knots_all = False
 
             samples = solver.get_samples()
-            all_samples.append(samples.copy())
+            if all_knots_optimized:
+                all_samples.append(samples.copy())
 
-            costs = compute_cost_cumul(samples, sim, task, solver=solver, cumul_mod=cumul_mod)
+            costs = compute_cost_t_end(samples, sim, task, t_end=t_end)
             all_costs.append(costs)
 
             solver.update(samples, costs)
 
-            pbar.update(1)
+            max_std_diag = np.max(np.diag(solver.state.cov)[:N_var_to_opt])
+            nit += 1
+
+            pbar_it.update(1)
             pbar_postfix["min_cost"] = solver.state.min_cost_all
             pbar_postfix["cost"] = solver.state.min_cost
-            pbar_postfix["Nk_opt"] = N_knots_to_opt
-            pbar_postfix["Nit"] = nit
-            pbar.set_postfix(pbar_postfix)
+            pbar_postfix["std_max"] = max_std_diag
+            pbar_knots.set_postfix(pbar_postfix)
+        
+        del pbar_it
 
     end = time.time()
     duration = end - start

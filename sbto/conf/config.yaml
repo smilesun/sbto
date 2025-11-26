@@ -14,11 +14,15 @@ init_knots_from_ref: false
 warm_start:
   # Start from solver state in <rundir>
   rundir: ""
+  # Add value on the diagonal of the cov after warm starting
+  add_cov_diag: 0.
+  # Iterations of warm start (if 0, same number as in solver config)
+  N_it: 0
   # Warm start with multiple shooting (shooting nodes from referece)
   multiple_shooting: false
   # Warm start with incremental optimization of the knots
   incremental: false
-  # Reset sigma0 to defaut when warm starting (take only the mean)
-  reset_sigma0: false
-  # Iterations of warm start (if 0, same number as in solver config)
-  N_it: 0
+  # Max number of iterations per increment
+  N_max_incr: 50
+  # Minimum value of the diag covariance to increment the number of var to opt
+  min_std_next: 4.0e-2

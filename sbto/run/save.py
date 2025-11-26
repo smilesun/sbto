@@ -185,9 +185,10 @@ def copy_hydra_config(hydra_rundir: str, dst_path: str):
     if os.path.exists(hydra_cfg_dir):
         shutil.copytree(hydra_cfg_dir, f"{dst_path}/{HYDRA_CFG}")
 
-def save_mj_model(dir_path: str, mj_model: mujoco.MjModel):
+def save_mj_model(dir_path: str, mj_spec: mujoco.MjSpec):
     file_name = os.path.join(dir_path, f"{MJ_MODEL_NAME}.xml")
-    mujoco.mj_saveLastXML(file_name, mj_model)
+    with open(file_name, "w") as f:
+        f.write(mj_spec.to_xml())
 
 def save_results(
     sim: SimMjRollout,
@@ -204,7 +205,7 @@ def save_results(
     task_name = task.__class__.__name__
     result_dir = create_dirs(task_name, description)
 
-    save_mj_model(result_dir, sim.mj_scene.mj_model)
+    save_mj_model(result_dir, sim.mj_scene.edit.mj_spec)
 
     print(f"[{description or 'Unnamed'}] Best cost: {solver_state_final.min_cost_all}")
     best_knots = solver_state_final.best_all
@@ -216,7 +217,8 @@ def save_results(
         t, x_traj, qdes_traj, obs_traj = map(np.squeeze, sim.rollout(best_knots, with_x0=True))
 
     save_trajectories(result_dir, t, x_traj, qdes_traj)
-    save_all_samples_and_cost(result_dir, all_samples, all_costs)
+    N_it_samples = all_samples.shape[0]
+    save_all_samples_and_cost(result_dir, all_samples, all_costs[-N_it_samples:])
     copy_hydra_config(hydra_rundir, result_dir)
     if solver_state_0:
         save_solver_state(result_dir, solver_state_0, INITIAL_SOLVER_STATE_SUFFIX)

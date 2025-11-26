@@ -4,6 +4,7 @@ from typing import Optional
 import copy
 import os
 import numpy as np
+from functools import partial
 
 from sbto.sim.sim_base import SimRolloutBase
 from sbto.tasks.task_base import OCPBase
@@ -13,30 +14,35 @@ from sbto.run.optimize import optimize_single_shooting, optimize_mutiple_shootin
 from sbto.run.save import save_results, get_final_state_from_rundir
 
 def optimize_and_save_data(
+    cfg,
     sim: SimRolloutBase,
     task: OCPBase,
     solver: SamplingBasedSolver,
-    description: str = "",
     hydra_rundir: str = "",
-    save_fig: bool = True,
     solver_state_0: Optional[SolverState] = None,
-    multiple_shooting: bool = False,
-    incremental: bool = False,
     ) -> None:
 
-    # Save initial state
+    # Copy initial state
     if solver_state_0:
         solver_state_0 = copy.deepcopy(solver_state_0)
     else:
         solver_state_0 = copy.deepcopy(solver.state)
 
-    # Single shooting or multiple_shooting
-    if multiple_shooting:
+    # Multiple_shooting
+    if cfg.warm_start.multiple_shooting:
         if not isinstance(task, TaskMjRef):
             raise ValueError("Task should be an instance of TaskMjRef (with reference)")
         optimizer_fn = optimize_mutiple_shooting
-    elif incremental:
-        optimizer_fn = optimize_incremental_opt
+
+    # Incremental opt
+    elif cfg.warm_start.incremental:
+        optimizer_fn = partial(
+            optimize_incremental_opt,
+            N_max_it_per_knots=cfg.warm_start.N_max_incr,
+            min_std_next=cfg.warm_start.min_std_next,
+        )
+
+    # Single shooting
     else:
         optimizer_fn = optimize_single_shooting
     
@@ -54,10 +60,10 @@ def optimize_and_save_data(
         solver_state_final,
         all_samples,
         all_costs,
-        description,
+        cfg.description,
         hydra_rundir,
-        save_fig,
-        multiple_shooting,
+        cfg.save_fig,
+        cfg.warm_start.multiple_shooting,
     )
 
 def instantiate_from_cfg(cfg):
@@ -83,76 +89,77 @@ def get_warm_start_state_solver(cfg, sim, task, solver) -> SolverState:
 
     if cfg.warm_start.rundir and os.path.exists(cfg.warm_start.rundir):
         solver_state_0 = get_final_state_from_rundir(cfg.warm_start.rundir, solver)
+        print(solver_state_0.mean.shape)
+        solver.reset_min_cost_best(solver_state_0)
 
-        if cfg.warm_start.reset_sigma0:
+        if cfg.warm_start.add_cov_diag > 0.:
             solver.init_state()
-            solver_state_0.cov += solver.state.cov
-
-        # Reset min cost/best
-        solver_state_0.min_cost = np.inf
-        solver_state_0.min_cost_all = np.inf
-        D = len(solver_state_0.mean)
-        solver_state_0.best = np.empty(D)
-        solver_state_0.best_all = np.empty(D)
+            N = solver_state_0.mean.shape[0]
+            solver_state_0.cov += cfg.warm_start.add_cov_diag * np.eye(N)
 
     return solver_state_0
+
+def set_cfg_warm_start(cfg):
+    cfg_ws = copy.deepcopy(cfg)
+    WARM_START_MULTIPLE_SHOOTING = "ws_ms"
+    WARM_START_INCREMENTAL = "ws_incr"
+
+    # Update description
+    sep = "_" if cfg.description else ""
+    if cfg_ws.warm_start.incremental:
+        cfg_ws.description += sep + WARM_START_INCREMENTAL
+    
+    elif cfg_ws.warm_start.multiple_shooting:
+        cfg_ws.description += sep + WARM_START_MULTIPLE_SHOOTING
+    return cfg_ws
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def main(cfg):
     hydra_rundir = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
 
     sim, task, solver = instantiate_from_cfg(cfg)
-    solver_state_0 = get_warm_start_state_solver(cfg, sim, task, solver)
 
-    if cfg.warm_start.multiple_shooting:
-        _N_it = cfg.solver.cfg.N_it
-        if cfg.warm_start.N_it > 0:
-            solver.cfg.N_it = cfg.warm_start.N_it
+    # Warm start
+    if (
+        cfg.warm_start.multiple_shooting or
+        cfg.warm_start.incremental
+        ):
+        
+        cfg_ws = set_cfg_warm_start(cfg)
 
-        description = cfg.description + "warm_start_ms"
+        # Update solver Nit
+        _N_it = cfg_ws.solver.cfg.N_it
+        if cfg_ws.warm_start.N_it > 0:
+            solver.cfg.N_it = cfg_ws.warm_start.N_it
+
+        solver_state_0 = get_warm_start_state_solver(cfg, sim, task, solver)
         rundir = optimize_and_save_data(
+            cfg_ws,
             sim,
             task,
             solver,
-            description,
             hydra_rundir,
-            cfg.save_fig,
             solver_state_0=solver_state_0,
-            multiple_shooting=True
         )
         cfg.warm_start.rundir = rundir
+
+        # Set back the number of solver iterations
         solver.cfg.N_it = _N_it
+        # Reset warm start params
+        cfg.warm_start.multiple_shooting = False
+        cfg.warm_start.incremental = False
 
-    if cfg.warm_start.incremental:
-        _N_it = cfg.solver.cfg.N_it
-        if cfg.warm_start.N_it > 0:
-            solver.cfg.N_it = cfg.warm_start.N_it
-
-        description = cfg.description + "warm_start_incremental"
+    # Optimize single shooting
+    if solver.cfg.N_it > 0:
+        solver_state_0 = get_warm_start_state_solver(cfg, sim, task, solver)
         rundir = optimize_and_save_data(
+            cfg,
             sim,
             task,
             solver,
-            description,
             hydra_rundir,
-            cfg.save_fig,
-            solver_state_0=solver_state_0,
-            incremental=True
+            solver_state_0,
         )
-        cfg.warm_start.rundir = rundir
-        solver.cfg.N_it = _N_it
-    
-    solver_state_0 = get_warm_start_state_solver(cfg, sim, task, solver)
-
-    rundir = optimize_and_save_data(
-        sim,
-        task,
-        solver,
-        cfg.description,
-        hydra_rundir,
-        cfg.save_fig,
-        solver_state_0,
-    )
-    
+        
 if __name__ == "__main__":
     main()
