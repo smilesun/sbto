@@ -2,185 +2,138 @@ import pickle
 import mujoco
 import numpy as np
 from scipy.interpolate import interp1d
-from typing import List
+from typing import Dict, List, Tuple
 
-from sbto.utils.finite_diff import finite_diff_qpos_traj_high_order, finite_diff_quat_traj
+from sbto.utils.finite_diff import (
+    finite_diff_qpos_traj_high_order,
+    finite_diff_quat_traj,
+)
 
-def compute_time_from_fps(fps, N):
+
+# ------------------------------------------------------------
+# Utility functions
+# ------------------------------------------------------------
+
+def normalize_quat(q: np.ndarray) -> np.ndarray:
+    """Normalize quaternion array [T,4]."""
+    return q / np.linalg.norm(q, axis=-1, keepdims=True)
+
+
+def quat_xyzw_to_wxyz(q: np.ndarray) -> np.ndarray:
+    """Convert quaternion [x,y,z,w] -> [w,x,y,z]."""
+    return np.column_stack([q[:, 3], q[:, :3]])
+
+
+def compute_time_array(fps: float, N: int) -> np.ndarray:
     return np.arange(N) / fps
 
-def quatxyzw2quatwxyz(quat):
-    new_quat = np.empty_like(quat)
-    new_quat[:, 0] = quat[:, -1]
-    new_quat[:, 1:] = quat[:, :3]
-    return new_quat
 
-def normalize_quat(quat):
-    quat /= np.linalg.norm(quat, axis=-1, keepdims=True)
-    return quat
+# ------------------------------------------------------------
+# Loading NPZ reference
+# ------------------------------------------------------------
 
-def concatenate_full_state(data):
-    if "object_rot" in data and "object_root_pos" in data:
-        qpos = np.concatenate(
-            (
-                data["root_pos"],
-                data["root_rot"],
-                data["dof_pos"],
-                data["object_root_pos"],
-                data["object_rot"],
-            ), axis=-1
-        )
-        qvel = np.concatenate(
-            (
-                data["root_v"],
-                data["root_w"],
-                data["dof_v"],
-                data["object_v"],
-                data["object_w"],
-            ), axis=-1
-        )
+def load_npz_reference(path: str) -> Dict[str, np.ndarray]:
+    """
+    Loads reference from NPZ and extracts the required qpos fields.
+    Only returns minimal dict: qpos, fps.
+    """
+    file = np.load(path)
+    qpos = file["qpos"]
+    fps = file["fps"].item() if isinstance(file["fps"], np.ndarray) else file["fps"]
 
-    else:
-        qpos = np.concatenate(
-            (
-                data["root_pos"],
-                data["root_rot"],
-                data["dof_pos"],
-            ), axis=-1
-        )
-        qvel = np.concatenate(
-            (
-                data["root_v"],
-                data["root_w"],
-                data["dof_v"],
-            ), axis=-1
-        )
+    return {
+        "qpos": qpos,
+        "fps": float(fps),
+    }
 
-    x = np.concatenate((qpos, qvel), axis=-1)
-    return qpos, qvel, x
 
-def interpolate_data(data, dt: float):
-    t_interp = np.arange(0, data["time"][-1], dt)
-    INTERP = [
-        'qpos',
-        'root_pos',
-        'root_rot',
-        'dof_pos',
-        'object_root_pos',
-        'object_rot',
-        'object_v',
-        'object_w',
-        'root_v',
-        'root_w',
-        'dof_v'
-        ]
+# ------------------------------------------------------------
+# Trajectory processing utilities
+# ------------------------------------------------------------
 
-    for k, v in data.items():
-        if k in INTERP and v is not None:
-            interpolate = interp1d(
-                data["time"],
-                y=v,
-                axis=0,
-            )
-            data[k] = interpolate(t_interp)
-            if "rot" in k:
-                data[k] = normalize_quat(data[k])
+def interpolate_trajectory(
+    values: np.ndarray, time: np.ndarray, t_new: np.ndarray, is_quat=False
+):
+    """Generic interpolation for batched arrays."""
+    interp = interp1d(time, values, axis=0)
+    out = interp(t_new)
+    return normalize_quat(out) if is_quat else out
 
-    data["time"] = t_interp
-    return data
 
-def compute_vel_from_pos(data, dt: float):
-    if "object_rot" in data and "object_root_pos" in data:
-        data["object_v"] = finite_diff_qpos_traj_high_order(data["object_root_pos"], dt)
-        data["object_w"] = finite_diff_quat_traj(data["object_rot"], dt)
-    
-    data["root_v"] = finite_diff_qpos_traj_high_order(data["root_pos"], dt)
-    data["root_w"] = finite_diff_quat_traj(data["root_rot"], dt)
-    data["dof_v"] = finite_diff_qpos_traj_high_order(data["dof_pos"], dt)
+def compute_velocities(qpos_dict: Dict[str, np.ndarray], dt: float) -> Dict[str, np.ndarray]:
+    """Compute velocities for root/dof/object segments."""
+    out = {}
 
-    return data
+    # Root
+    out["root_v"] = finite_diff_qpos_traj_high_order(qpos_dict["root_pos"], dt)
+    out["root_w"] = finite_diff_quat_traj(qpos_dict["root_rot"], dt)
 
-def extract_sensor_data(mj_model, state_traj, sensor_name: str):
-    """Extracts sensors over a trajectory [T, nq+nv]."""
-    data = mujoco.MjData(mj_model)
+    # DOF
+    out["dof_v"] = finite_diff_qpos_traj_high_order(qpos_dict["dof_pos"], dt)
 
-    sensor_info = []
-    sid = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_SENSOR, sensor_name)
-    adr = mj_model.sensor_adr[sid]
-    dim = mj_model.sensor_dim[sid]
-    sensor_info = (adr, dim)
+    # Object (optional)
+    if "object_root_pos" in qpos_dict:
+        out["object_v"] = finite_diff_qpos_traj_high_order(qpos_dict["object_root_pos"], dt)
+        out["object_w"] = finite_diff_quat_traj(qpos_dict["object_rot"], dt)
 
-    T = len(state_traj)
-    sensor_data = []
+    return out
 
-    nq = mj_model.nq
-    qpos_traj = state_traj[:, :nq]
-    qvel_traj = state_traj[:, nq:]
 
-    for t in range(T):
-        data.qpos[:] = qpos_traj[t]
-        data.qvel[:] = qvel_traj[t]
-        mujoco.mj_forward(mj_model, data)
+def slice_reference(qpos: np.ndarray) -> Dict[str, np.ndarray]:
+    """
+    Splits qpos into semantic blocks.
+    Assumes layout:
+        [quat(4), root_pos(3), dof(...), object_rot(4), object_pos(3)]
+    """
+    root_rot = qpos[:, :4]
+    root_pos = qpos[:, 4:7]
 
-        step = []
-        adr, dim = sensor_info
-        step.append(np.copy(data.sensordata[adr:adr+dim]))
-        sensor_data.append(step)
+    # Middle = robot DOF, last 7 = object (quat + pos)
+    dof_pos = qpos[:, 7:-7]
+    object_rot = qpos[:, -7:-3]
+    object_pos = qpos[:, -3:]
 
-    try:
-        sensor_data = np.squeeze(np.array(sensor_data))
-    except Exception:
-        pass
+    return {
+        "root_rot": root_rot,
+        "root_pos": root_pos,
+        "dof_pos": dof_pos,
+        "object_rot": object_rot,
+        "object_root_pos": object_pos,
+    }
 
-    return sensor_data
 
-def load_reference(
-    ref_motion_path: str,
-    xml_path: str,
-    speedup: float = 1.0,
-    z_offset: float = 0.0,
-    ):
-    objs = []
-    with open(ref_motion_path, "rb") as f:
-        while True:
-            try:
-                objs.append(pickle.load(f))
-            except EOFError:
-                break
+def concatenate_full_state(qpos_dict, vel_dict) -> np.ndarray:
+    qpos = np.hstack([
+        qpos_dict["root_pos"],
+        qpos_dict["root_rot"],
+        qpos_dict["dof_pos"],
+        qpos_dict.get("object_root_pos", []),
+        qpos_dict.get("object_rot", []),
+    ])
 
-    data = {}
-    for sub in objs:
-        data.update(sub)
+    qvel = np.hstack([
+        vel_dict["root_v"],
+        vel_dict["root_w"],
+        vel_dict["dof_v"],
+        vel_dict.get("object_v", []),
+        vel_dict.get("object_w", []),
+    ])
 
-    N = len(data["root_pos"])
-    data["time"] = compute_time_from_fps(data["fps"] * speedup, N)
+    return np.hstack([qpos, qvel])
 
-    mj_model = mujoco.MjModel.from_xml_path(xml_path)
-    dt_data = 1. / (data["fps"] * speedup)
-    data = compute_vel_from_pos(data, dt_data)
 
-    dt_interp = mj_model.opt.timestep
-    if dt_interp != 1/data["fps"]:
-        data = interpolate_data(data, dt_interp)
-
-    if z_offset != 0:
-        data["root_pos"][:, 2] -= z_offset
-        if "object_root_pos" in data:
-            data["object_root_pos"][:, 2] -= z_offset
-
-    data["root_rot"] = quatxyzw2quatwxyz(data["root_rot"])
-    if "object_rot" in data:
-        data["object_rot"] = quatxyzw2quatwxyz(data["object_rot"])
-
-    data["qpos"], data["qvel"], data["x"] = concatenate_full_state(data)
-
-    return data
+# ------------------------------------------------------------
+# Main Class
+# ------------------------------------------------------------
 
 class ReferenceMotion:
     """
-    Loads reference trajectories from pickled logs.
-    Automatically loads and processes trajectory in __init__.
+    Clean, minimal reference motion loader from NPZ.
+    - Keeps only qpos + time + fps in data dict.
+    - Everything else is provided via properties:
+        root_pos, root_rot, dof_pos, etc.
     """
+
     def __init__(
         self,
         ref_motion_path: str,
@@ -189,122 +142,207 @@ class ReferenceMotion:
         speedup: float = 1.0,
         z_offset: float = 0.0,
     ):
-        self.ref_motion_path = ref_motion_path
-        self.xml_path = xml_path
-        self.speedup = speedup
-        self.z_offset = z_offset
+        # Load base data
+        base = load_npz_reference(ref_motion_path)
+        self.fps = base["fps"] * speedup
+        self.qpos = base["qpos"]
 
-        mj_model = mujoco.MjModel.from_xml_path(xml_path)
-        act_joint_ids = mj_model.actuator_trnid[:, 0]
-        self.act_qpos_adr = mj_model.jnt_qposadr[act_joint_ids] 
+        # Initial time array
+        self.time = compute_time_array(self.fps, len(self.qpos))
 
-        self.data = load_reference(
-            ref_motion_path,
-            xml_path,
-            speedup,
-            z_offset,
-        )
+        # Mujoco model properties
+        self.mj_model = mujoco.MjModel.from_xml_path(xml_path)
+
+        # Apply shift
         self.shift_start_time(t0)
 
-        for key, value in self.data.items():
-            setattr(self, key, value)
+        # Apply z-offset
+        if z_offset != 0:
+            self.qpos[:, 6] -= z_offset  # root_pos[2]
+            self.qpos[:, -1] -= z_offset  # object_root_pos[2]
 
-    def add_sensor_data(self, mj_model, sensor_names: List[str]):
-        for sensor_name in sensor_names:
-            sensor_data = extract_sensor_data(mj_model, self.data["x"], sensor_name)
-            self.data[sensor_name] = sensor_data
+        # Interpolate to MJ timestep
+        self.interpolate_to_mj_dt()
+
+        # Pre-slice qpos into dict
+        self._qpos_dict = slice_reference(self.qpos)
+
+        # Compute velocities
+        dt = self.mj_model.opt.timestep
+        self._vel_dict = compute_velocities(self._qpos_dict, dt)
+
+        # Full state vector
+        self.x = concatenate_full_state(self._qpos_dict, self._vel_dict)
+
+        # Precompute actuator addresses
+        act_ids = self.mj_model.actuator_trnid[:, 0]
+        self.act_qpos_adr = self.mj_model.jnt_qposadr[act_ids]
+
+        self.sensor_data = {}
+
+    # ------------------------------------------------------------
+    # Interpolation
+    # ------------------------------------------------------------
+
+    def interpolate_to_mj_dt(self):
+        dt_mj = self.mj_model.opt.timestep
+        dt_in = 1.0 / self.fps
+
+        if abs(dt_mj - dt_in) < 1e-9:
+            return
+
+        t_new = np.arange(0, self.time[-1], dt_mj)
+        self.qpos = interpolate_trajectory(self.qpos, self.time, t_new)
+        self.time = t_new
+
+    # ------------------------------------------------------------
+    # Time shifting
+    # ------------------------------------------------------------
 
     def shift_start_time(self, t0: float):
-        """
-        Shift / trim the trajectory so that new time starts at 0
-        and corresponds to the old time t0.
-
-        Parameters
-        ----------
-        t0 : float
-            The time (in seconds) at which the new trajectory should start.
-        """
-        time = self.data["time"]
+        """Trim trajectory so that new time starts at t0."""
         if t0 <= 0:
-            return  # nothing to do
+            return
 
-        # Find the first index with time >= t0
-        i0 = np.searchsorted(time, t0)
+        idx = np.searchsorted(self.time, t0)
+        self.qpos = self.qpos[idx:]
+        self.time = self.time[idx:] - self.time[idx]
 
-        # Slice all time-dependent arrays
-        for key, value in list(self.data.items()):
-            # Only slice arrays with matching length on axis 0
-            if isinstance(value, np.ndarray) and value.shape[0] == len(time):
-                self.data[key] = value[i0:]
-
-        # Reset time to start at zero
-        self.data["time"] = self.data["time"] - self.data["time"][0]
+    # ------------------------------------------------------------
+    # Extend trajectory
+    # ------------------------------------------------------------
 
     def extend_to_length(self, T_needed: int):
         """
-        Extend all time-dependent arrays to have at least T_needed timesteps
-        by repeating the last timestep's data.
-
-        Parameters
-        ----------
-        T_needed : int
-            Desired minimum number of timesteps.
+        Extend the trajectory to have at least T_needed timesteps
+        by repeating the final timestep data.
+        Automatically updates:
+            - time
+            - qpos
+            - sliced qpos dict
+            - velocities
+            - full x state
         """
-        time = self.data["time"]
-        T = len(time)
-
+        T = len(self.time)
         if T_needed <= T:
-            return  # already long enough
+            return
 
-        # How many steps need to be added
         extra = T_needed - T
 
-        # Determine dt (use last interval, or 0 if length < 2)
+        # Determine dt (use last interval)
         if T >= 2:
-            dt = time[-1] - time[-2]
+            dt = self.time[-1] - self.time[-2]
         else:
-            dt = 0.0
+            dt = self.mj_model.opt.timestep
 
         # --- Extend time ---
-        new_times = time[-1] + dt * np.arange(1, extra + 1)
-        self.data["time"] = np.concatenate([time, new_times], axis=0)
+        new_times = self.time[-1] + dt * np.arange(1, extra + 1)
+        self.time = np.concatenate([self.time, new_times], axis=0)
 
-        # --- Extend each time-dependent array ---
-        for key, arr in list(self.data.items()):
-            if not isinstance(arr, np.ndarray):
-                continue
-            # Only extend arrays whose first axis is time-dependent
-            if arr.shape[0] != T:
-                continue
+        # --- Extend qpos ---
+        last_val = self.qpos[-1:]
+        padding = np.repeat(last_val, repeats=extra, axis=0)
+        self.qpos = np.concatenate([self.qpos, padding], axis=0)
 
-            last_val = arr[-1:]
-            pad = np.repeat(last_val, repeats=extra, axis=0)
-            self.data[key] = np.concatenate([arr, pad], axis=0)
+        # Recompute sliced fields after qpos changed
+        self._qpos_dict = slice_reference(self.qpos)
 
-        # Re-bind attributes (keep class in sync with .data)
-        for key, value in self.data.items():
-            setattr(self, key, value)
-    
-    def get_act_qpos_range(self):
-        q_min = np.min(self.qpos[:, self.act_qpos_adr], axis=-1)
-        q_max = np.max(self.qpos[:, self.act_qpos_adr], axis=-1)
-        return q_min, q_max
-    
-    def get_act_qpos_mean(self):
-        return np.mean(self.qpos[:, self.act_qpos_adr], axis=0)
-    
+        # Recompute velocities
+        dt_mj = self.mj_model.opt.timestep
+        self._vel_dict = compute_velocities(self._qpos_dict, dt_mj)
+
+        # Recompute x
+        self.x = concatenate_full_state(self._qpos_dict, self._vel_dict)
+
+    # ------------------------------------------------------------
+    # Sensor extraction
+    # ------------------------------------------------------------
+    def add_sensor_data(self, mj_model, sensor_names: List[str]):
+        """
+        Extracts sensor values for each timestep along the trajectory.
+        The results are stored as attributes:
+            self.<sensor_name>
+        
+        Sensor trajectory shape:
+            [T, sensor_dim]
+        """
+        data = mujoco.MjData(mj_model)
+
+        T = len(self.time)
+        nq = mj_model.nq
+        nv = mj_model.nv
+
+        qpos_traj = self.x[:, :nq]
+        qvel_traj = self.x[:, nq:]
+
+        for sensor_name in sensor_names:
+            sid = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_SENSOR, sensor_name)
+            adr = mj_model.sensor_adr[sid]
+            dim = mj_model.sensor_dim[sid]
+
+            out = np.zeros((T, dim))
+
+            for t in range(T):
+                data.qpos[:] = qpos_traj[t]
+                data.qvel[:] = qvel_traj[t]
+                mujoco.mj_forward(mj_model, data)
+                out[t] = data.sensordata[adr:adr + dim]
+
+            self.sensor_data[sensor_name] = out
+
+    # ------------------------------------------------------------
+    # Lazy property getters (clean!)
+    # ------------------------------------------------------------
+
     @property
-    def qpos0(self):
-        return self.qpos[0]
-    
+    def x0(self): return self.x[0]
+
     @property
-    def x0(self):
-        return self.x[0]
-    
+    def root_rot(self): return self._qpos_dict["root_rot"]
+
     @property
-    def act_qpos0(self):
-        return self.qpos[0, self.act_qpos_adr]
-    
+    def root_pos(self): return self._qpos_dict["root_pos"]
+
+    @property
+    def dof_pos(self): return self._qpos_dict["dof_pos"]
+
+    @property
+    def object_root_pos(self): return self._qpos_dict["object_root_pos"]
+
+    @property
+    def object_rot(self): return self._qpos_dict["object_rot"]
+
+    @property
+    def root_v(self): return self._vel_dict["root_v"]
+
+    @property
+    def root_w(self): return self._vel_dict["root_w"]
+
+    @property
+    def dof_v(self): return self._vel_dict["dof_v"]
+
+    @property
+    def object_v(self): return self._vel_dict.get("object_v")
+
+    @property
+    def object_w(self): return self._vel_dict.get("object_w")
+
+    # ------------------------------------------------------------
+    # Actuator utilities
+    # ------------------------------------------------------------
+
     @property
     def act_qpos(self):
         return self.qpos[:, self.act_qpos_adr]
+
+    @property
+    def act_qpos0(self):
+        return self.qpos[0, self.act_qpos_adr]
+
+    # Range and mean
+    def get_act_qpos_range(self):
+        q = self.act_qpos
+        return q.min(axis=0), q.max(axis=0)
+
+    def get_act_qpos_mean(self):
+        return np.mean(self.act_qpos, axis=0)

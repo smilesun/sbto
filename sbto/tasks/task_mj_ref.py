@@ -79,7 +79,7 @@ class TaskMjRef(TaskMj):
 
             i = 0
             for sns_name in sensor_name:
-                data = self.ref.data[sns_name]
+                data = self.ref.sensor_data[sns_name]
                 n_sns = data.shape[-1]
                 ref_values[:, i:i+n_sns] = data[:self.T-1, :]
                 ref_values_terminal[:, i:i+n_sns] = data[self.T-1, :]
@@ -89,8 +89,8 @@ class TaskMjRef(TaskMj):
         else:
             name = sensor_name
 
-            ref_values = self.ref.data[sensor_name][:self.T-1, :]
-            ref_values_terminal = self.ref.data[sensor_name][self.T-1, :]
+            ref_values = self.ref.sensor_data[sensor_name][:self.T-1, :]
+            ref_values_terminal = self.ref.sensor_data[sensor_name][self.T-1, :]
 
         name_suffix = '_'.join(map(str, idx_o.tolist()))
         name = name + '_' + name_suffix
