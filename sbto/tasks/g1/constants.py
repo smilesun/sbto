@@ -26,9 +26,13 @@ class Sensors:
     ]
     OBJ_STATIC_CONTACT = ["obj_static_cnt"]
     OBJ_FLOOR_CONTACT = ["obj_static_cnt"]
-    OBJ_THIGH_COLLISION = [
+    OBJ_ROBOT_COLLISION = [
         "obj_right_thigh_cnt",
         "obj_left_thigh_cnt",
+        "obj_right_shin_cnt",
+        "obj_left_shin_cnt",
+        "torso_obj",
+        "pelivs_obj",
     ]
     HAND_POS = [
         "left_hand_pos",

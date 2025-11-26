@@ -51,8 +51,8 @@ class ConfigG1MoveLargeBoxObjRef():
     obj_v_weight: float = 1.
     obj_w_weight: float = 1.
     # --- Obj/hands Contact cost ---
-    contact_obj_weight: float = 0.5
-    contact_hands_weight: float = 0.5
+    contact_obj_weight: float = 1.
+    contact_hands_weight: float = 0.25
 
     collision_obj_thigh: float = 0.25
 
@@ -262,10 +262,10 @@ class G1MoveLargeBoxObjRef(TaskMjRef):
         )
 
         # --- Collision obj - thigh ---
-        no_contact_plan_feet = np.zeros((self.T-1, len(G1.Sensors.OBJ_THIGH_COLLISION)), dtype=np.uint8) # feet always in contact
+        no_contact = np.zeros((self.T-1, len(G1.Sensors.OBJ_ROBOT_COLLISION)), dtype=np.int32) # feet always in contact
         self.add_sensor_cost(
-            G1.Sensors.OBJ_THIGH_COLLISION,
+            G1.Sensors.OBJ_ROBOT_COLLISION,
             hamming_dist_nb,
-            ref_values=no_contact_plan_feet,
+            ref_values=no_contact,
             weights=cfg.collision_obj_thigh,
         )

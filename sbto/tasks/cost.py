@@ -7,7 +7,7 @@ Array = npt.NDArray[np.float64]
 @njit(parallel=True, fastmath=True, cache=True)
 def quadratic_cost_nb(var, ref, weight):
     N, T, I = var.shape
-    result = np.empty(N, np.float64)
+    result = np.zeros(N, np.float64)
     for n in prange(N):
         total = 0.0
         for t in range(T):
@@ -29,7 +29,7 @@ def quaternion_dist_nb(var, ref, weights):
         cost: (N,)
     """
     N, T, Q = var.shape
-    result = np.empty(N, dtype=np.float64)
+    result = np.zeros(N, dtype=np.float64)
     QUAT_SIZE = 4
     Nquat = Q // QUAT_SIZE
 
@@ -58,7 +58,7 @@ def hamming_dist_nb(cnt_rollout, cnt_plan, weights):
         cost : (N,) array of float32
     """
     N, T, C = cnt_rollout.shape
-    result = np.empty(N, dtype=np.float64)
+    result = np.zeros(N, dtype=np.float64)
 
     for n in prange(N):
         total = 0.0

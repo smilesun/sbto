@@ -74,8 +74,8 @@ class TaskMjRef(TaskMj):
 
         # Set cost name and ref values
         if not isinstance(sensor_name, str):
-            ref_values = np.empty((self.T-1, len(idx_o)))
-            ref_values_terminal = np.empty((1, len(idx_o)))
+            ref_values = np.zeros((self.T-1, len(idx_o)))
+            ref_values_terminal = np.zeros((1, len(idx_o)))
 
             i = 0
             for sns_name in sensor_name:

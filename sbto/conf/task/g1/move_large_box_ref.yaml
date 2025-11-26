@@ -42,13 +42,13 @@ cfg:
   obj_pos_weight: 20.
   obj_quat_weight: 2.
   obj_v_weight: 1.
-  obj_w_weight: 1.
+  obj_w_weight: 2.
 
   # --- Obj/hands Contact cost ---
-  contact_obj_weight: 0.
+  contact_obj_weight: 0.5
   contact_hands_weight: 0.
 
-  collision_obj_thigh: 0.
+  collision_obj_thigh: 2.
 
 
 
@@ -84,10 +84,10 @@ sim:
 
           obj:
             type: box
-            pos: [0.01, 0.0, 0.03]
-            size: [0.165, 0.155, 0.16]
+            pos: [0.0, 0.0, 0.0]
+            size: [0.18, 0.18, 0.18]
             euler: [3.05, 0.11, 1.11]
-            mass: 0.5
+            mass: 0.6
             rgba: [0.3, 0.3, 0.3, 1.0]
             freejoint: true
             bodyname: largebox

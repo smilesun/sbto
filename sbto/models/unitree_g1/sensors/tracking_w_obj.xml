@@ -35,6 +35,8 @@
         <!-- obj - collision  -->
         <contact geom1="obj" geom2="left_thigh_collision" data="found" num="1" name="obj_left_thigh_cnt"/>
         <contact geom1="obj" geom2="right_thigh_collision" data="found" num="1" name="obj_right_thigh_cnt"/>
+        <contact geom1="obj" geom2="left_shin_collision" data="found" num="1" name="obj_left_shin_cnt"/>
+        <contact geom1="obj" geom2="right_shin_collision" data="found" num="1" name="obj_right_shin_cnt"/>
 
         <!-- hands position and quat -->
         <!-- <framepos objtype="site" objname="right_palm" name="right_hand_pos"/>

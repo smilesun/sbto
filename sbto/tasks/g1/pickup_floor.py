@@ -232,9 +232,9 @@ class G1PickupFloor(TaskMj):
         )
 
         # --- Collision obj - thigh ---
-        no_contact_plan_feet = np.zeros((self.T-1, len(G1.Sensors.OBJ_THIGH_COLLISION)), dtype=np.uint8) # feet always in contact
+        no_contact_plan_feet = np.zeros((self.T-1, len(G1.Sensors.OBJ_ROBOT_COLLISION)), dtype=np.uint8) # feet always in contact
         self.add_sensor_cost(
-            G1.Sensors.OBJ_THIGH_COLLISION,
+            G1.Sensors.OBJ_ROBOT_COLLISION,
             hamming_dist_nb,
             ref_values=no_contact_plan_feet,
             weights=cfg.collision_obj_thigh,
