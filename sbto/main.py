@@ -69,6 +69,16 @@ def optimize_and_save_data(
 def instantiate_from_cfg(cfg):
     sim = instantiate(cfg.task.sim)
     task = instantiate(cfg.task, sim=sim)
+    
+    # Reinstantiate sim if too many timesteps
+    if hasattr(task, "ref"):
+        if task.ref.extra > 0:
+            t_steps_knots = int(cfg.task.sim.cfg.T / cfg.task.sim.cfg.Nknots)
+            cfg.task.sim.cfg.T = task.ref.T - task.ref.extra
+            cfg.task.sim.cfg.Nknots = (cfg.task.sim.cfg.T // t_steps_knots) + 1
+            sim = instantiate(cfg.task.sim)
+            task = instantiate(cfg.task, sim=sim)
+
     solver = instantiate(cfg.solver, D=sim.Nvars_u)
     return sim, task, solver
 

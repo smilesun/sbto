@@ -179,6 +179,7 @@ class ReferenceMotion:
         self.act_qpos_adr = self.mj_model.jnt_qposadr[act_ids]
 
         self.sensor_data = {}
+        self.extra = 0
 
     # ------------------------------------------------------------
     # Interpolation
@@ -227,7 +228,7 @@ class ReferenceMotion:
         if T_needed <= T:
             return
 
-        extra = T_needed - T
+        self.extra = T_needed - T
 
         # Determine dt (use last interval)
         if T >= 2:
@@ -236,12 +237,12 @@ class ReferenceMotion:
             dt = self.mj_model.opt.timestep
 
         # --- Extend time ---
-        new_times = self.time[-1] + dt * np.arange(1, extra + 1)
+        new_times = self.time[-1] + dt * np.arange(1, self.extra + 1)
         self.time = np.concatenate([self.time, new_times], axis=0)
 
         # --- Extend qpos ---
         last_val = self.qpos[-1:]
-        padding = np.repeat(last_val, repeats=extra, axis=0)
+        padding = np.repeat(last_val, repeats=self.extra, axis=0)
         self.qpos = np.concatenate([self.qpos, padding], axis=0)
 
         # Recompute sliced fields after qpos changed
@@ -293,7 +294,9 @@ class ReferenceMotion:
     # ------------------------------------------------------------
     # Lazy property getters (clean!)
     # ------------------------------------------------------------
-
+    @property
+    def T(self): return len(self.time)
+    
     @property
     def x0(self): return self.x[0]
 
