@@ -8,7 +8,6 @@ from typing import Tuple, Optional, Any
 from sbto.sim.sim_base import SimRolloutBase
 from sbto.tasks.task_base import OCPBase
 from sbto.solvers.solver_base import SamplingBasedSolver, SolverState
-from sbto.utils.modulation import step_mod, step_mod_transition
 
 Array = npt.NDArray[np.float64]
 
@@ -127,6 +126,7 @@ def optimize_incremental_opt(
     reset_best_knots_all = True
     pbar_knots = trange(sim.Nknots-1, desc="Optimizing", leave=True)
     pbar_postfix = {}
+    nit_total = 0
 
     for N_knots_to_opt in pbar_knots:
         N_knots_to_opt += 1  # starts with first 2 knots
@@ -157,11 +157,13 @@ def optimize_incremental_opt(
 
             max_std_diag = np.max(np.diag(solver.state.cov)[:N_var_to_opt])
             nit += 1
+            nit_total += 1
 
             pbar_it.update(1)
             pbar_postfix["min_cost"] = solver.state.min_cost_all
             pbar_postfix["cost"] = solver.state.min_cost
             pbar_postfix["std_max"] = max_std_diag
+            pbar_postfix["it"] = nit_total
             pbar_knots.set_postfix(pbar_postfix)
         
         del pbar_it
