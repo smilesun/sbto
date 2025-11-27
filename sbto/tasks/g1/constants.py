@@ -33,6 +33,7 @@ class Sensors:
         "obj_left_shin_cnt",
         "torso_obj",
         "pelvis_obj",
+        "head_obj"
     ]
     HAND_POS = [
         "left_hand_pos",

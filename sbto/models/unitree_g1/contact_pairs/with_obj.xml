@@ -125,7 +125,8 @@
     <pair name="torso_obj" geom1="torso_collision" geom2="obj" condim="1"/>
     <!-- pelvis - obj -->
     <pair name="pelivs_obj" geom1="pelvis_collision" geom2="obj" condim="1"/>
-    
+    <!-- head - obj -->
+    <pair name="head_obj" geom1="head_collision" geom2="obj" condim="1"/>
   
   </contact>
 
