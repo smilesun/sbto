@@ -1,0 +1,9 @@
+<mujoco>
+    <sensor>
+        <!-- torso pose and vel -->
+        <framepos objtype="site" objname="imu_in_torso" name="global_pos_torso"/>
+        <framequat objtype="site" objname="imu_in_torso" name="orientation_torso"/>
+        <framelinvel objtype="site" objname="imu_in_torso" name="global_linvel_torso"/>
+        <frameangvel objtype="site" objname="imu_in_torso" name="global_angvel_torso"/>
+    </sensor>
+</mujoco>

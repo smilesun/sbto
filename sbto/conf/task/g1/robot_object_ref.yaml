@@ -57,8 +57,17 @@ mj_scene_ref:
   cfg:
     _target_: sbto.sim.scene_mj.ConfigMjScene
     xml_scene_path: sbto/models/unitree_g1/scene_mjx_29dof_no_hands.xml
-    xml_sensors_path: sbto/models/unitree_g1/sensors/tracking_w_obj.xml
-    xml_contact_pairs_path: sbto/models/unitree_g1/contact_pairs/with_obj.xml
+    xml_sensors_path:
+    - sbto/models/unitree_g1/sensors/feet_contact.xml
+    - sbto/models/unitree_g1/sensors/feet_pos.xml
+    - sbto/models/unitree_g1/sensors/hands_pos_obj_frame.xml
+    - sbto/models/unitree_g1/sensors/obj_collision.xml
+    - sbto/models/unitree_g1/sensors/obj.xml
+    - sbto/models/unitree_g1/sensors/torso.xml
+    xml_contact_pairs_path:
+    - sbto/models/unitree_g1/contact_pairs/reduced.xml
+    - sbto/models/unitree_g1/contact_pairs/robot_obj_collision.xml
+    - sbto/models/unitree_g1/contact_pairs/robot_obj.xml
     add_body:
   
       largebox:
@@ -107,8 +116,17 @@ sim:
     cfg:
       _target_: sbto.sim.scene_mj.ConfigMjScene
       xml_scene_path: sbto/models/unitree_g1/scene_mjx_29dof_no_hands.xml
-      xml_sensors_path: sbto/models/unitree_g1/sensors/tracking_w_obj.xml
-      xml_contact_pairs_path: sbto/models/unitree_g1/contact_pairs/with_obj.xml
+      xml_sensors_path:
+      - sbto/models/unitree_g1/sensors/feet_contact.xml
+      - sbto/models/unitree_g1/sensors/feet_pos.xml
+      - sbto/models/unitree_g1/sensors/hands_pos_obj_frame.xml
+      - sbto/models/unitree_g1/sensors/obj_collision.xml
+      - sbto/models/unitree_g1/sensors/obj.xml
+      - sbto/models/unitree_g1/sensors/torso.xml
+      xml_contact_pairs_path:
+      - sbto/models/unitree_g1/contact_pairs/reduced.xml
+      - sbto/models/unitree_g1/contact_pairs/robot_obj_collision.xml
+      - sbto/models/unitree_g1/contact_pairs/robot_obj.xml
       add_body:
       
         largebox:

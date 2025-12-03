@@ -1,0 +1,9 @@
+<mujoco>
+    <sensor>
+        <!-- feet pos and quat -->
+        <framepos objtype="site" objname="right_foot" name="right_foot_pos"/>
+        <framepos objtype="site" objname="left_foot" name="left_foot_pos"/>
+        <framequat objtype="site" objname="right_foot" name="right_foot_quat"/>
+        <framequat objtype="site" objname="left_foot" name="left_foot_quat"/>
+    </sensor>
+</mujoco>

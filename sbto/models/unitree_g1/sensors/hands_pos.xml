@@ -1,0 +1,9 @@
+<mujoco>
+    <sensor>
+        <!-- hands position and quat -->
+        <framepos objtype="site" objname="right_palm" name="right_hand_pos"/>
+        <framepos objtype="site" objname="left_palm" name="left_hand_pos"/>
+        <framequat name="left_hand_orientation" objtype="site" objname="left_palm"/>
+        <framequat name="right_hand_orientation" objtype="site" objname="right_palm"/>
+    </sensor>
+</mujoco>

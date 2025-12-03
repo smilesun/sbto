@@ -1,0 +1,28 @@
+<mujoco>
+    <sensor>
+        <!-- actuator torques -->
+        <actuatorfrc name="left_hip_pitch_joint" actuator="left_hip_pitch_joint"/>
+        <actuatorfrc name="left_hip_roll_joint" actuator="left_hip_roll_joint"/>
+        <actuatorfrc name="left_hip_yaw_joint" actuator="left_hip_yaw_joint"/>
+        <actuatorfrc name="left_knee_joint" actuator="left_knee_joint"/>
+        <actuatorfrc name="left_ankle_pitch_joint" actuator="left_ankle_pitch_joint"/>
+        <actuatorfrc name="left_ankle_roll_joint" actuator="left_ankle_roll_joint"/>
+        <actuatorfrc name="right_hip_pitch_joint" actuator="right_hip_pitch_joint"/>
+        <actuatorfrc name="right_hip_roll_joint" actuator="right_hip_roll_joint"/>
+        <actuatorfrc name="right_hip_yaw_joint" actuator="right_hip_yaw_joint"/>
+        <actuatorfrc name="right_knee_joint" actuator="right_knee_joint"/>
+        <actuatorfrc name="right_ankle_pitch_joint" actuator="right_ankle_pitch_joint"/>
+        <actuatorfrc name="right_ankle_roll_joint" actuator="right_ankle_roll_joint"/>
+        <actuatorfrc name="waist_yaw_joint" actuator="waist_yaw_joint"/>
+        <actuatorfrc name="left_shoulder_pitch_joint" actuator="left_shoulder_pitch_joint"/>
+        <actuatorfrc name="left_shoulder_roll_joint" actuator="left_shoulder_roll_joint"/>
+        <actuatorfrc name="left_shoulder_yaw_joint" actuator="left_shoulder_yaw_joint"/>
+        <actuatorfrc name="left_elbow_joint" actuator="left_elbow_joint"/>
+        <actuatorfrc name="left_wrist_roll_joint" actuator="left_wrist_roll_joint"/>
+        <actuatorfrc name="right_shoulder_pitch_joint" actuator="right_shoulder_pitch_joint"/>
+        <actuatorfrc name="right_shoulder_roll_joint" actuator="right_shoulder_roll_joint"/>
+        <actuatorfrc name="right_shoulder_yaw_joint" actuator="right_shoulder_yaw_joint"/>
+        <actuatorfrc name="right_elbow_joint" actuator="right_elbow_joint"/>
+        <actuatorfrc name="right_wrist_roll_joint" actuator="right_wrist_roll_joint"/>
+    </sensor>
+</mujoco>

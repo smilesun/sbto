@@ -1,0 +1,26 @@
+<mujoco>
+
+  <contact>
+
+    <!-- foot - obj -->
+    <pair name="right_foot2_obj" geom1="right_foot2_collision" geom2="obj" condim="1"/>
+    <pair name="left_foot2_obj" geom1="left_foot2_collision" geom2="obj" condim="1"/>
+    <!-- shin - obj -->
+    <pair name="right_shin_obj" geom1="left_shin_collision" geom2="obj" condim="1"/>
+    <pair name="left_shin_obj" geom1="right_shin_collision" geom2="obj" condim="1"/>
+    <!-- thigh - obj -->
+    <pair name="right_thigh_obj" geom1="left_thigh_collision" geom2="obj" condim="1"/>
+    <pair name="left_thigh_obj" geom1="right_thigh_collision" geom2="obj" condim="1"/>
+    <!-- torso - obj -->
+    <pair name="torso_obj" geom1="torso_collision" geom2="obj" condim="1"/>
+    <!-- pelvis - obj -->
+    <pair name="pelivs_obj" geom1="pelvis_collision" geom2="obj" condim="1"/>
+    <!-- head - obj -->
+    <pair name="head_obj" geom1="head_collision" geom2="obj" condim="1"/>
+    <!-- elbow_yaw - obj -->
+    <pair geom1="left_elbow_yaw_collision" geom2="obj" condim="1"/>
+    <pair geom1="right_elbow_yaw_collision" geom2="obj" condim="1"/>
+
+  </contact>
+
+</mujoco>

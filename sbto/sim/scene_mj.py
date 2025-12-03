@@ -80,9 +80,9 @@ class ConfigMjScene():
     """
     # base scene path
     xml_scene_path: str
-    xml_sensors_path: str = ""
-    xml_contact_pairs_path: str = ""
-    xml_keyframes_path: str = ""
+    xml_sensors_path: str | List[str] = ""
+    xml_contact_pairs_path: str | List[str] = ""
+    xml_keyframes_path: str | List[str] = ""
     add_body: Dict[str, Any] = field(default_factory=lambda: {})
     # random state initialization
     scale_q : tuple = (0.1, )
@@ -310,25 +310,40 @@ class MjScene():
                     self.edit.add_sphere(name=name, **kwargs)
     
     def add_keyframes(self):
-        path = self.cfg.xml_keyframes_path
-        if path:
-            if os.path.exists(path):
-                self.edit.add_keyframes_from_file(path)
-            else:
-                print(f"MJCF file {path} not found")
+        if isinstance(self.cfg.xml_keyframes_path, str):
+            paths = [self.cfg.xml_keyframes_path]
+        else:
+            paths = self.cfg.xml_keyframes_path
+            
+        for path in paths:
+            if path:
+                if os.path.exists(path):
+                    self.edit.add_keyframes_from_file(path)
+                else:
+                    print(f"MJCF file {path} not found")
 
     def add_sensors(self):
-        path = self.cfg.xml_sensors_path
-        if path:
-            if os.path.exists(path):
-                self.edit.add_sensors_from_file(path)
-            else:
-                print(f"MJCF file {path} not found")
+        if isinstance(self.cfg.xml_sensors_path, str):
+            paths = [self.cfg.xml_sensors_path]
+        else:
+            paths = self.cfg.xml_sensors_path
+
+        for path in paths:
+            if path:
+                if os.path.exists(path):
+                    self.edit.add_sensors_from_file(path)
+                else:
+                    print(f"MJCF file {path} not found")
 
     def add_contact_pairs(self):
-        path = self.cfg.xml_contact_pairs_path
-        if path:
-            if os.path.exists(path):
-                self.edit.add_cnt_pairs_from_file(path)
-            else:
-                print(f"MJCF file {path} not found")
+        if isinstance(self.cfg.xml_contact_pairs_path, str):
+            paths = [self.cfg.xml_contact_pairs_path]
+        else:
+            paths = self.cfg.xml_contact_pairs_path
+
+        for path in paths:
+            if path:
+                if os.path.exists(path):
+                    self.edit.add_cnt_pairs_from_file(path)
+                else:
+                    print(f"MJCF file {path} not found")
