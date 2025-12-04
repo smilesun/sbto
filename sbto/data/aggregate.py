@@ -1,21 +1,22 @@
 import os
+import glob
 import numpy as np
 from typing import List
 
-from sbto.data.utils import ALL_SAMPLES_COSTS_FILENAME, save_rollout
+from sbto.data.utils import ALL_SAMPLES_COSTS_FILENAME, ROLLOUT_FILENAME, save_rollout
 
 def get_all_costs_and_samples_paths(data_dir: str) -> List[str]:
     all_costs_samples_paths = []
-    for exp_dir in os.listdir(data_dir):
-        exp_path = os.path.join(data_dir, exp_dir)
-        if not os.path.isdir(exp_path):
-            continue
-        costs_samples_path = os.path.join(
-            exp_path,
-            f"{ALL_SAMPLES_COSTS_FILENAME}.npz"
+    all_costs_samples_paths += glob.glob(
+        f"{data_dir}/*/{ALL_SAMPLES_COSTS_FILENAME}.*",
+        include_hidden=True,
+        recursive=True
         )
-        all_costs_samples_paths.append(costs_samples_path)
-    
+    all_costs_samples_paths += glob.glob(
+        f"{data_dir}/{ALL_SAMPLES_COSTS_FILENAME}.*",
+        include_hidden=True,
+        recursive=True
+        )
     return all_costs_samples_paths
 
 def get_top_samples(
@@ -44,38 +45,72 @@ def get_top_samples(
 
 def aggregate_top_samples(
     sim,
-    task,
     data_dir: str,
-    N_top_samples: int,
+    N_top_samples: int = 0,
+    percentile_cost: float = 0.,
     min_iteration: int = 0,
-    ):
+    save_data: bool = True
+    ) -> str:
     all_costs_samples_paths = get_all_costs_and_samples_paths(data_dir)
     all_costs = []
     all_samples = []
 
+    first_shape = 0
     for path in all_costs_samples_paths:
         file = np.load(path)
         samples, costs = file["samples"], file["costs"]
-
+        if first_shape == 0:
+            first_shape = samples.shape[-1]
+        # Could be that same ref has runs with different number of knots
+        if samples.shape[-1] != first_shape:
+            continue
         all_costs.append(costs)
         all_samples.append(samples)
 
-    all_samples_arr = np.vstack(all_samples)[min_iteration:, :]
-    all_costs_arr = np.vstack(all_costs)[min_iteration:, :]
+    if len(all_costs) > 1:
+        all_samples_arr = np.vstack(all_samples)[min_iteration:, :]
+        all_costs_arr = np.vstack(all_costs)[min_iteration:, :]
+    elif len(all_costs) == 1:
+        all_samples_arr = all_samples[0][min_iteration:, :]
+        all_costs_arr = all_costs[0][min_iteration:, :]
+    else:
+        print("No data found.")
+        return {}
+
+    if percentile_cost > 0. and N_top_samples == 0:
+        costs_flat = costs.reshape(-1)
+        threshold = np.percentile(costs_flat, percentile_cost)
+        top_mask = costs_flat <= threshold
+        N_top_samples = np.sum(top_mask)
+        print(f"Percentile cost: {percentile_cost} -> N_top_samples: {N_top_samples}")
+    else:
+        raise ValueError("Cost percentile or number of top samples need to be set.")
 
     top_samples, top_costs = get_top_samples(all_costs_arr, all_samples_arr, N_top_samples)
     # Rollout to get data
-    t, state_traj, u_traj, obs_traj = sim.rollout(top_samples)
-    ## Sanity check (should have the same cost as during the optimization)
-    # c = task.cost(state_traj, u_traj, obs_traj)
-    # print(top_costs.min(), top_costs.max())
+    try:
+        t, state_traj, u_traj, obs_traj = sim.rollout(top_samples)
+    except:
+        print(f"Rollout failed ({data_dir})")
+        return {}
+        ## Sanity check (should have the same cost as during the optimization)
+        # c = task.cost(state_traj, u_traj, obs_traj)
+    print(f"Min/Max costs: {top_costs.min():.2f} / {top_costs.max():.2f}")
     # print(c.min(), c.max())
 
-    save_rollout(
-        data_dir,
-        time=t,
-        x_traj=state_traj,
-        u_traj=u_traj,
-        obs_traj=obs_traj,
-        costs=top_costs
-    )
+    data = {
+        "time": t,
+        "x": state_traj,
+        "u": u_traj,
+        "o": obs_traj,
+        "c": top_costs,
+    }
+
+    if save_data:
+        rollout_data_path = os.path.join(data_dir, f"{ROLLOUT_FILENAME}.npz")
+        np.savez(
+            rollout_data_path,
+            **data
+        )
+
+    return data

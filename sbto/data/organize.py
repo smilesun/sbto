@@ -1,7 +1,7 @@
 import os
 import shutil
 
-from sbto.data.utils import get_config_from_rundir, get_filename_from_path
+from sbto.data.utils import get_config_dict_from_rundir, get_filename_from_path
 
 def group_run_dir_by_ref_file_name(task_dir: str):
     """
@@ -11,7 +11,7 @@ def group_run_dir_by_ref_file_name(task_dir: str):
     for dir in os.listdir(task_dir):
         run_dir = os.path.join(task_dir, dir)
         if os.path.isdir(run_dir):
-            cfg = get_config_from_rundir(run_dir)
+            cfg = get_config_dict_from_rundir(run_dir)
             # Get all ref file paths
             try:
                 ref_motion_path = cfg["task"]["cfg"]["ref_motion_path"]
