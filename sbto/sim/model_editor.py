@@ -396,6 +396,19 @@ class ModelEditor():
             sensor.intprm = [1, 0, 1]
 
         return name
+    
+    @with_callback()
+    def delete_sensors(
+        self,
+        sensor_name: str | list[str],
+        ) -> None:
+        if isinstance(sensor_name, str):
+            sensor_name = [sensor_name]
+
+        for sns_name in sensor_name:
+            if self.mj_spec.sensor(sns_name):
+                print(sns_name)
+                self.mj_spec.delete(self.mj_spec.sensor(sns_name))
 
     @with_callback()
     def add_sensors_from_file(
