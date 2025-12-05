@@ -11,7 +11,9 @@ _cnt_sens_obj = 1
 _cnt_sens_dim_obj = 1 # found
 
 class Sensors:
-
+    SELF_COLLISION = [
+        "self_collision"
+    ]
     FEET_CONTACTS = [
         "left_foot1",
         "left_foot2",

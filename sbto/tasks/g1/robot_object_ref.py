@@ -4,17 +4,12 @@ from typing import Optional
 
 import sbto.tasks.g1.constants as G1
 from sbto.sim.sim_mj_rollout import SimMjRollout
-from sbto.tasks.task_mj_ref import TaskMjRef, MjScene
+from sbto.tasks.task_mj_ref import TaskMjRef, MjScene, ConfigRefMotion
 from sbto.tasks.cost import quadratic_cost_nb, quaternion_dist_nb, hamming_dist_nb
 
 @dataclass
 class ConfigG1RobotObjRef():
-    # --- Reference motion ---
-    ref_motion_path: str = "./sbto/tasks/g1/robot-object/sub3_largebox_005_original.pkl"
-    t0: float = 0.
-    speedup: float = 1.25
-    z_offset: float = 0.01
-
+    
     t_hand_cnt_before_lift: float = 0.15
     t_hand_cnt_after_place: float = 0.15
 
@@ -56,6 +51,7 @@ class ConfigG1RobotObjRef():
     contact_obj_weight: float = 1.
     contact_hands_weight: float = 0.25
     collision_obj_robot: float = 0.25
+    self_collision: float = 1.
 
 class G1RobotObjRef(TaskMjRef):
 
@@ -63,19 +59,14 @@ class G1RobotObjRef(TaskMjRef):
         self,
         sim: SimMjRollout,
         cfg: ConfigG1RobotObjRef,
+        cfg_ref: ConfigRefMotion,
         mj_scene_ref: Optional[MjScene] = None,
         ):
-        super().__init__(sim, mj_scene_ref)
+        super().__init__(sim, cfg_ref, mj_scene_ref)
         Nu = sim.mj_scene.Nu
         dt = sim.mj_scene.dt
         T = sim.T
         duration = dt * T
-        self.init_reference(
-            cfg.ref_motion_path,
-            cfg.t0,
-            cfg.speedup,
-            cfg.z_offset,
-        )
 
         sensor_names = [
             G1.Sensors.TORSO_POS,
@@ -289,4 +280,13 @@ class G1RobotObjRef(TaskMjRef):
             hamming_dist_nb,
             ref_values=no_contact,
             weights=cfg.collision_obj_robot,
+        )
+
+        # Self collision
+        no_contact = np.zeros((self.T-1, 1), dtype=np.int32) # feet always in contact
+        self.add_sensor_cost(
+            G1.Sensors.SELF_COLLISION,
+            hamming_dist_nb,
+            ref_values=no_contact,
+            weights=cfg.self_collision,
         )

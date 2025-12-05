@@ -3,39 +3,34 @@ _target_: sbto.tasks.g1.robot_object_ref.G1RobotObjRef
 cfg:
   _target_: sbto.tasks.g1.robot_object_ref.ConfigG1RobotObjRef
 
-  ref_motion_path: "./sbto/tasks/g1/robot-object/sub3_largebox_000_original.npz"
-  t0: 0. #0.22
-  speedup: 1.25
-  z_offset: 0.01
-
   t_hand_cnt_before_lift: 0.15
   t_hand_cnt_after_place: 0.15
 
   # --- State costs ---
-  joint_pos_weight: 0.3
+  joint_pos_weight: 0.25
   joint_vel_weight: 0.01
   base_pos_weight: 5.0
   base_quat_weight: 1.0
 
   # --- Torso pose/vel ---
-  torso_pos_weight: 30.0
-  torso_quat_weight: 2.0
+  torso_pos_weight: 25.0
+  torso_quat_weight: 3.0
   torso_quat_weight_terminal: 2.0
-  torso_linvel_weight: 1.0
-  torso_linvel_weight_terminal: 1.0
-  torso_angvel_weight: 1.0
-  torso_angvel_weight_terminal: 1.0
+  torso_linvel_weight: 0.5
+  torso_linvel_weight_terminal: 0.5
+  torso_angvel_weight: 0.5
+  torso_angvel_weight_terminal: 0.5
 
   # --- Foot pose cost ---
   foot_position: 15.0
-  foot_orientation: 0.1
+  foot_orientation: 0.
 
   # --- Feet Contact cost ---
   contact_feet_weight: 0.
   contact_force_feet_weight: 1.0e-6
 
   # --- Hand pose cost ---
-  hand_position: 15.0
+  hand_position: 10.0
   hand_orientation: 0.
   hand_pos_z_mult: 1.
 
@@ -43,13 +38,22 @@ cfg:
   obj_pos_weight: 20.
   obj_quat_weight: 2.
   obj_v_weight: 1.
-  obj_w_weight: 2.
+  obj_w_weight: 1.
 
   # --- Obj/hands Contact cost ---
-  contact_obj_weight: 1.
-  contact_hands_weight: 0.5
+  contact_obj_weight: 2.
+  contact_hands_weight: 0.25
 
   collision_obj_robot: 2.
+  self_collision: 1.
+
+cfg_ref:
+  _target_: sbto.tasks.task_mj_ref.ConfigRefMotion
+  motion_path: ./sbto/tasks/g1/motion/sub3_largebox_005_original.npz
+  t0: 0.
+  speedup: 1.0
+  z_offset: 0.0
+  override_T_sim: True
 
 # === MuJoCo Scene ===
 mj_scene_ref:
@@ -123,6 +127,7 @@ sim:
       - sbto/models/unitree_g1/sensors/obj_collision.xml
       - sbto/models/unitree_g1/sensors/obj.xml
       - sbto/models/unitree_g1/sensors/torso.xml
+      - sbto/models/unitree_g1/sensors/self_collision.xml
       xml_contact_pairs_path:
       - sbto/models/unitree_g1/contact_pairs/reduced.xml
       - sbto/models/unitree_g1/contact_pairs/robot_obj_collision.xml
