@@ -85,14 +85,6 @@ class G1RobotObjRef(TaskMjRef):
         q_max = sim.mj_scene.q_max
         sim.set_act_limits(q_min, q_max)
 
-        unused_sensors = []
-        if cfg.hand_orientation == 0.:
-            unused_sensors.extend(G1.Sensors.HAND_QUAT)
-            unused_sensors.extend(G1.Sensors.HAND_QUAT_OBJ_FRAME)
-        if cfg.foot_orientation == 0.:
-            unused_sensors.extend(G1.Sensors.FEET_QUAT)
-        self.mj_scene.edit.delete_sensors(unused_sensors)
-
        ### SET CONTACT PLAN
         # --- Contact plan feet ---
         N_feet_cnt = len(G1.Sensors.FEET_CONTACTS)
@@ -100,18 +92,13 @@ class G1RobotObjRef(TaskMjRef):
         N_obj_cnt = len(G1.Sensors.OBJ_FLOOR_CONTACT)
         N_cnt = N_feet_cnt + N_hands_cnt + N_obj_cnt
 
-        cnt_sns =  G1.Sensors.FEET_CONTACTS + G1.Sensors.OBJ_FLOOR_CONTACT + G1.Sensors.HAND_CONTACTS
-        dim_sns = 4
-        cnt_sns_sub_id = list(range(0, len(cnt_sns) * dim_sns, dim_sns))
-        self.set_contact_sensor_id(cnt_sns, cnt_sns_sub_id)
-        self.contact_plan = np.zeros((self.T, N_cnt), dtype=np.int32)
 
+        contact_plan_feet = np.zeros((self.T, N_feet_cnt), dtype=np.int32)
         for i, foot_cnt in enumerate(G1.Sensors.FEET_CONTACTS):
-            self.contact_plan[:, i] = self.ref.sensor_data[foot_cnt][:self.T, 0]
-        self.contact_plan[self.contact_plan > 1] = 1
+            contact_plan_feet[:, i] = self.ref.sensor_data[foot_cnt][:self.T, 0]
 
         # --- Contact plan obj from ref ---
-        self.contact_plan[:, N_feet_cnt] = self.ref.sensor_data[G1.Sensors.OBJ_FLOOR_CONTACT[0]][:self.T, 0]
+        contact_plan_obj_env = self.ref.sensor_data[G1.Sensors.OBJ_FLOOR_CONTACT[0]][:self.T, :1]
 
         # --- Contact plan hands ---
         contact_hand_ref = np.zeros((self.T, len(G1.Sensors.HAND_CONTACTS)), dtype=np.int32)
@@ -120,35 +107,58 @@ class G1RobotObjRef(TaskMjRef):
         
         # If the object is lifed:
         # Hands make contact slightly before and release slightly after
-        nodes_lifted = np.where(self.contact_plan[:, N_feet_cnt:N_feet_cnt+N_obj_cnt] == 0)[0]
-        time_lifted = np.sum(self.contact_plan[:, N_feet_cnt:N_feet_cnt+N_obj_cnt]) * dt
+        nodes_lifted = np.where(contact_plan_obj_env == 0)[0]
+        time_lifted = np.sum(nodes_lifted) * dt
         hand_cnt = np.where(contact_hand_ref > 0)[0]
-        time_hand_cnt = np.sum(contact_hand_ref) * dt / contact_hand_ref.shape[-1]
         MIN_TIME_LIFTED = 0.4
-        MIN_TIME_HAND_CNT = 0.4
         contact_hands_weight = cfg.contact_hands_weight
 
         # MIN_TIME_LIFTED to prevent misdetection
+        contact_plan_hands = np.zeros((self.T, N_hands_cnt), dtype=np.int32)
         if len(nodes_lifted) > 0 and time_lifted > MIN_TIME_LIFTED:
-            node_grasp_hands = nodes_lifted[0] - int(cfg.t_hand_cnt_before_lift / dt)
-            node_release_hands = nodes_lifted[-1] + int(cfg.t_hand_cnt_after_place / dt)
-            self.contact_plan[node_grasp_hands:node_release_hands, N_feet_cnt+N_obj_cnt:] = 1
-        
-        # elif len(hand_cnt) > 0 and time_hand_cnt > MIN_TIME_HAND_CNT:
-        #     self.contact_plan[:, N_feet_cnt+N_obj_cnt:] = contact_hand
-
-        # If obj is not lifted, no hands contact + track hand pos in world frame
+            node_grasp_hands = max(nodes_lifted[0] - int(cfg.t_hand_cnt_before_lift / dt), 0)
+            node_release_hands = min(nodes_lifted[-1] + int(cfg.t_hand_cnt_after_place / dt), self.T-1)
+            contact_plan_hands[node_grasp_hands:node_release_hands, :] = 1
+        # If obj is not lifted, no hands contact
         else:
             contact_hands_weight = 0.
 
-        self.contact_plan[self.contact_plan > 1] = 1
+        contact_plan_hands[contact_plan_hands > 1] = 1
+        contact_plan_obj_env[contact_plan_obj_env > 1] = 1
+        contact_plan_feet[contact_plan_feet > 1] = 1
+
+        # Setup contact plan for plot and remove unused sensors
+        unused_sensors = []
+        contact_plan = []
+        cnt_sns = []
+
+        cnt_sns.extend(G1.Sensors.OBJ_FLOOR_CONTACT)
+        contact_plan.append(contact_plan_obj_env)
+
+        if cfg.hand_orientation == 0.:
+            unused_sensors.extend(G1.Sensors.HAND_QUAT)
+            unused_sensors.extend(G1.Sensors.HAND_QUAT_OBJ_FRAME)
+
+        if cfg.foot_orientation == 0.:
+            unused_sensors.extend(G1.Sensors.FEET_QUAT)
+
+        if cfg.contact_feet_weight > 0.:
+            cnt_sns.extend(G1.Sensors.FEET_CONTACTS)
+            contact_plan.append(contact_plan_feet)
 
         if contact_hands_weight == 0:
-            hand_pos_sensor = G1.Sensors.HAND_POS
-            hand_quat_sensor = G1.Sensors.HAND_QUAT
+            unused_sensors.extend(G1.Sensors.HAND_CONTACTS)
         else:
-            hand_pos_sensor = G1.Sensors.HAND_POS_OBJ_FRAME
-            hand_quat_sensor = G1.Sensors.HAND_QUAT_OBJ_FRAME
+            cnt_sns.extend(G1.Sensors.HAND_CONTACTS)
+            contact_plan.append(contact_plan_hands)
+
+        self.mj_scene.edit.delete_sensors(unused_sensors)
+
+        self.contact_plan = np.int32(np.concatenate(contact_plan, axis=-1))
+
+        dim_sns = 4
+        cnt_sns_sub_id = list(range(0, len(cnt_sns) * dim_sns, dim_sns))
+        self.set_contact_sensor_id(cnt_sns, cnt_sns_sub_id)
 
         # --- G1 costs ---
         self.add_state_cost_from_ref(
@@ -259,7 +269,7 @@ class G1RobotObjRef(TaskMjRef):
             G1.Sensors.FEET_CONTACTS,
             hamming_dist_nb,
             sub_idx_sensor=G1.Sensors.id_cnt_status_feet,
-            ref_values=self.contact_plan[:, :N_feet_cnt],
+            ref_values=contact_plan_feet,
             weights=cfg.contact_feet_weight,
         )
         # Feet-env contact force
@@ -274,18 +284,17 @@ class G1RobotObjRef(TaskMjRef):
             G1.Sensors.OBJ_STATIC_CONTACT,
             hamming_dist_nb,
             sub_idx_sensor=[0],
-            ref_values=self.contact_plan[:, N_feet_cnt],
+            ref_values=contact_plan_obj_env,
             weights=cfg.contact_obj_weight,
         )
         # Hands-obj contact
-        if contact_hands_weight > 0:
-            self.add_sensor_cost(
-                G1.Sensors.HAND_CONTACTS,
-                hamming_dist_nb,
-                sub_idx_sensor=G1.Sensors.id_cnt_status_hands,
-                ref_values=self.contact_plan[:, N_feet_cnt+N_obj_cnt:],
-                weights=contact_hands_weight,
-            )
+        self.add_sensor_cost(
+            G1.Sensors.HAND_CONTACTS,
+            hamming_dist_nb,
+            sub_idx_sensor=G1.Sensors.id_cnt_status_hands,
+            ref_values=contact_plan_hands,
+            weights=contact_hands_weight,
+        )
         # Collision obj - robot
         self.add_sensor_cost(
             G1.Sensors.OBJ_ROBOT_COLLISION,

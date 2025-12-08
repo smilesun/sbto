@@ -16,8 +16,8 @@ cfg:
   torso_pos_weight: 25.0
   torso_quat_weight: 2.0
   torso_quat_weight_terminal: 2.0
-  torso_linvel_weight: 0.5
-  torso_angvel_weight: 0.5
+  torso_linvel_weight: 0.1
+  torso_angvel_weight: 0.1
 
   # --- Foot pose cost ---
   foot_position: 15.0
@@ -25,26 +25,26 @@ cfg:
 
   # --- Feet Contact cost ---
   contact_feet_weight: 0.
-  contact_force_feet_weight: 1.0e-6
+  contact_force_feet_weight: 2.0e-6
 
   # --- Hand pose cost ---
   # (both in world and obj ref frame)
-  hand_position: 6.
+  hand_position: 5.
   hand_orientation: 0.
 
   # --- Obj pose cost ---
-  obj_pos_weight: 20.
-  obj_pos_weight_terminal: 40.
-  obj_quat_weight: 2.
+  obj_pos_weight: 25.
+  obj_pos_weight_terminal: 50.
+  obj_quat_weight: 2.5
   obj_quat_weight_terminal: 5.
-  obj_v_weight: 1.
-  obj_w_weight: 1.
+  obj_v_weight: 0.1
+  obj_w_weight: 0.1
 
   # --- Obj/hands Contact cost ---
   contact_obj_weight: 2.
-  contact_hands_weight: 0.25
+  contact_hands_weight: 0.5
 
-  collision_obj_robot: 2.
+  collision_obj_robot: 3.
   self_collision: 1.
 
 cfg_ref:
@@ -93,7 +93,7 @@ mj_scene_ref:
         condim: 3
         contype: 0
         conaffinity: 1
-        margin: 0.
+        margin: 0.04 # Margin to detect floor contact
         gap: 0.
         solref: [0.04, 1.]
         solmix: 3.
