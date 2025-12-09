@@ -14,7 +14,7 @@ def group_run_dir_by_ref_file_name(task_dir: str):
             cfg = get_config_dict_from_rundir(run_dir)
             # Get all ref file paths
             try:
-                ref_motion_path = cfg["task"]["cfg"]["ref_motion_path"]
+                ref_motion_path = cfg["task"]["cfg_ref"]["motion_path"]
             except Exception as e:
                 continue
             
