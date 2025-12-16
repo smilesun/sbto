@@ -27,7 +27,6 @@ def compute_obj_pos_error(obj_pos_traj, ref_obj_pos_traj):
     # If original input was unbatched, return scalar
     if err.shape[0] == 1:
         return err[0]
-
     return err
 
 def compute_obj_quat_error(obj_quat_traj, ref_obj_quat_traj):

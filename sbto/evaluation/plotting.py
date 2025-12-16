@@ -31,7 +31,9 @@ def plot_histograms_columns(df, columns, bins=50, figsize=(6,4)):
     for col in columns:
         plt.figure(figsize=figsize)
         sns.histplot(df[col].dropna(), bins=bins, kde=False)
-        plt.title(f"Histogram of {col}")
+        mean = np.mean(df[col].dropna())
+        std = np.std(df[col].dropna())
+        plt.title(f"Histogram of {col} (mean: {mean:.2f}, std: {std:.2f})")
         plt.xlabel(col)
         plt.ylabel("count")
         plt.tight_layout()
@@ -59,7 +61,9 @@ def plot_histograms_columns_grid(df, columns, bins=50, cols=3, figsize=(5,4)):
 
     for ax, col in zip(axes, columns):
         sns.histplot(df[col].dropna(), bins=bins, kde=False, ax=ax)
-        ax.set_title(col)
+        mean = np.mean(df[col].dropna())
+        std = np.std(df[col].dropna())
+        ax.set_title(f"{col} (mean: {mean:.2f}, std: {std:.2f})")
         ax.set_xlabel("")
         ax.set_ylabel("")
 
@@ -96,14 +100,129 @@ def plot_cost_vs_opt_n_it(df, figsize=(6,4)):
     plt.tight_layout()
     plt.show()
 
+
+def plot_histograms_columns_grid_compare(
+    df_sbto,
+    df_mpc,
+    columns,
+    bins=50,
+    cols=3,
+    figsize=(5, 4),
+    alpha=0.6
+):
+    """
+    Compare SBTO vs MPC error histograms in a grid layout.
+
+    Parameters
+    ----------
+    df_sbto : pd.DataFrame
+        SBTO dataset (algo == 'SBTO')
+    df_mpc : pd.DataFrame
+        MPC dataset (algo == 'SBMPC')
+    bins : int
+        Number of histogram bins.
+    cols : int
+        Number of columns in subplot grid.
+    figsize : tuple
+        Size of each subplot.
+    alpha : float
+        Histogram transparency.
+    """
+    n = len(columns)
+    rows = int(np.ceil(n / cols))
+
+    fig, axes = plt.subplots(
+        rows, cols,
+        figsize=(cols * figsize[0], rows * figsize[1]),
+        sharex=False
+    )
+    axes = axes.flatten()
+
+    for ax, col in zip(axes, columns):
+        sbto_vals = df_sbto[col].dropna()
+        mpc_vals = df_mpc[col].dropna()
+
+        sns.histplot(
+            sbto_vals,
+            bins=bins,
+            ax=ax,
+            stat="density",
+            element="step",
+            fill=True,
+            alpha=alpha,
+            label="SBTO"
+        )
+
+        sns.histplot(
+            mpc_vals,
+            bins=bins,
+            ax=ax,
+            stat="density",
+            element="step",
+            fill=True,
+            alpha=alpha,
+            label="SBMPC"
+        )
+
+        sbto_mean, sbto_std = sbto_vals.mean(), sbto_vals.std()
+        mpc_mean, mpc_std = mpc_vals.mean(), mpc_vals.std()
+
+        ax.set_title(
+            f"{col}\n"
+            f"SBTO μ={sbto_mean:.2f}, σ={sbto_std:.2f} | "
+            f"MPC μ={mpc_mean:.2f}, σ={mpc_std:.2f}"
+        )
+        ax.set_xlabel("")
+        ax.set_ylabel("")
+
+        ax.legend(fontsize=8)
+
+    # turn off unused axes
+    for ax in axes[n:]:
+        ax.axis("off")
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_error_histograms_grid_compare(
+    df_sbto,
+    df_mpc,
+    bins=50,
+    cols=3,
+    figsize=(5, 4),
+    alpha=0.6
+):
+    """
+    Compare SBTO vs MPC error histograms in a grid layout.
+
+    Parameters
+    ----------
+    df_sbto : pd.DataFrame
+        SBTO dataset (algo == 'SBTO')
+    df_mpc : pd.DataFrame
+        MPC dataset (algo == 'SBMPC')
+    bins : int
+        Number of histogram bins.
+    cols : int
+        Number of columns in subplot grid.
+    figsize : tuple
+        Size of each subplot.
+    alpha : float
+        Histogram transparency.
+    """
+    columns = get_error_columns(df_sbto)
+    plot_histograms_columns_grid_compare(df_sbto, df_mpc, columns, bins, cols, figsize, alpha)
+
+
 if __name__ == "__main__":
     from sbto.evaluation.load import load_dataset_with_errors
     import multiprocessing as mp
 
-    DATASET_ROOT = "datasets/OmniRetarget"
+    DATASET_ROOT = "datasets/G1RobotObjRef20Knots"
     mp.set_start_method("spawn", force=True)
     df = load_dataset_with_errors(DATASET_ROOT, num_workers=60)
-    
+    df = df.nsmallest(200, "min_cost")
     # single-figure histograms
     # plot_error_histograms(df)
     plot_T_vs_duration(df)

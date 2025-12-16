@@ -14,6 +14,7 @@ from sbto.data.utils import load_yaml, get_config_dict_from_rundir
 from sbto.utils.extract_ref import ReferenceMotion
 from sbto.evaluation.errors import *
 from sbto.evaluation.opt_stats import *
+from sbto.evaluation.diversity import *
 
 ###############################################################################
 # CONFIG LOADING INTO A DATAFRAME
@@ -51,7 +52,7 @@ def load_configs(dataset_root: str) -> dict:
 
     configs = {}
     for p in paths:
-        rundir = os.path.dirname(p)
+        rundir = os.path.dirname(p).replace("/.hydra", "")
         configs[rundir] = flatten_dict(load_yaml(p), filter=filter_out)
 
     return configs
@@ -194,7 +195,6 @@ def load_dataset_with_errors(dataset_root: str, num_workers=None) -> pd.DataFram
     """
     print("Loading configs...")
     configs = load_configs(dataset_root)
-    print(len(configs))
 
     print("Computing errors (parallel)...")
     errors = compute_all_errors_parallel(dataset_root, num_workers=num_workers)
@@ -211,13 +211,30 @@ def load_dataset_with_errors(dataset_root: str, num_workers=None) -> pd.DataFram
             rows.append(merged)
 
     df = pd.DataFrame(rows)
+    df.insert(0, "algo", "SBTO")
     print(f"Final dataset size: {df.shape}")
     return df
 
+def load_data(path):
+    return path, dict(np.load(path, mmap_mode="r+"))
 
-###############################################################################
-# MAIN
-###############################################################################
+def load_all_trajectories_dataset(dataset_root: str, only_best_traj: bool = False, num_workers = 20) -> pd.DataFrame:
+    FILENAME = "best_trajectory.npz" if only_best_traj else "top_trajectories.npz"
+    all_traj_paths = glob.glob(
+        f"{dataset_root}/**/{FILENAME}",
+        recursive=True,
+    )
+    # Compute stats for all traj
+    all_traj = {}
+
+    with mp.Pool(num_workers, maxtasksperchild=50) as pool:
+        for path, data in tqdm(pool.imap_unordered(load_data, all_traj_paths), total=len(all_traj_paths)):
+            if isinstance(data, Exception):
+                print(f"[WARN] Failed {path}: {data}")
+                continue
+            all_traj[path] = data
+    
+    return all_traj
 
 if __name__ == "__main__":
     mp.set_start_method("spawn", force=True)

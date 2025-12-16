@@ -9,7 +9,7 @@ TRAJ_FILENAME = "time_x_u_traj"
 ROLLOUT_FILENAME = "rollout_time_x_u_obs_traj"
 SOLVER_STATES_DIR = "./solver_states"
 ALL_SAMPLES_COSTS_FILENAME = "samples_costs"
-
+OPT_STATS_FILENAME = "optimization_stats"
 
 def get_filename_from_path(path: str):
     _, filename = os.path.split(path)
@@ -64,6 +64,18 @@ def get_config_path_from_rundir(run_dir: str):
         )
     if len(all_cfg_yaml) > 0:
         return all_cfg_yaml[0]
+    else:
+        return ""
+    
+def get_opt_stats_path_from_rundir(run_dir: str):
+    FILE_NAME = "optimization_stats"
+    all_paths = glob.glob(
+        f"{run_dir}/**__ws_incr/{FILE_NAME}.yaml",
+        include_hidden=True,
+        recursive=True
+        )
+    if len(all_paths) > 0:
+        return all_paths[0]
     else:
         return ""
     

@@ -33,10 +33,6 @@ def get_top_samples(
     costs_flat = costs.reshape(-1)
     samples_flat = samples.reshape(-1, D)
     
-    N_total = costs_flat.shape[0]
-    top_percent = N_top_samples / N_total * 100.
-    print(f"Aggregating top {top_percent:.2f}%")
-
     # Remove samples in double (in case keep elites for instance)
     costs_flat_unique, arg_unique = np.unique(costs_flat, return_index=True, sorted=True)
     samples_flat_unique = samples_flat[arg_unique]
