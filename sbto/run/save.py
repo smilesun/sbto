@@ -210,6 +210,7 @@ def save_results(
     multiple_shooting: bool = False,
     split_state: bool = False,
     save_top: float = 0.,
+    n_last_it: int = 0,
     remove_keys: List[str] = [],
     ) -> str:
     exp_name = task.__class__.__name__ if not exp_name else exp_name
@@ -226,13 +227,19 @@ def save_results(
         save_solver_state(result_dir, solver_state_0, INITIAL_SOLVER_STATE_SUFFIX)
     save_solver_state(result_dir, solver_state_final, FINAL_SOLVER_STATE_SUFFIX)
     
-    N_it_samples = all_samples.shape[0]
+    if n_last_it > 0:
+        N_it_samples = n_last_it
+        all_samples = all_samples[-N_it_samples:]
+    else:
+        N_it_samples = all_samples.shape[0]
     last_costs = all_costs[-N_it_samples:]
 
     # Save all samples and costs from the optimization
     if save_samples_costs:
-        print(f"Saving all samples and costs.")
-        N_it_samples = all_samples.shape[0]
+        if n_last_it > 0:
+            print(f"Saving all samples and costs from last {n_last_it} iteration.")
+        else:
+            print(f"Saving all samples and costs.")
         save_all_samples_and_cost(result_dir, all_samples, last_costs)
     
     # Rollout best trajectories (with initial states)
@@ -240,7 +247,8 @@ def save_results(
     if save_top > 0.:
         # How many top traj to save
         if save_top >= 1:
-            N_top_samples = int(save_top)
+            N_samples = last_costs.size
+            N_top_samples = min(int(save_top), N_samples)
         else:
             percentile = save_top
             threshold = np.percentile(last_costs, percentile)

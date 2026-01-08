@@ -12,3 +12,5 @@ split_state: false
 save_top: 0.
 # Remove keys from data
 remove_keys: []
+# Take top trajectories from the <n_last_it> last iterations only
+n_last_it: 0
