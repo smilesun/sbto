@@ -74,34 +74,31 @@ mj_scene_ref:
     - sbto/models/unitree_g1/contact_pairs/robot_obj.xml
     add_body:
   
-      chair:
+      largebox:
         type: body_only
         pos: [0.4, 0.0, 0.1]
         euler: [0., 0., 0.]
 
       obj:
-        type: urdf
-        # pos: [0., 0., 0.0655]
-        urdf_path: sbto/models/chair/chair_scaled_1.0.urdf
-        pos: [-0.1, 0.05, -0.16]
-        # size: [0.1, 0.1, 0.115]
-        size: [0.155, 0.155, -0.18]
+        type: box
+        pos: [0., 0., 0.0105]
+        size: [0.2, 0.2, 0.18] # Using a larger box to detect hand contact
         euler: [3.05, 0.11, 1.11]
         mass: 0.6
         rgba: [0.3, 0.3, 0.3, 1.0]
         freejoint: true
-        bodyname: chair
+        bodyname: largebox
         group: 1
         priority: 1
         condim: 3
         contype: 0
         conaffinity: 1
-        margin: 0.0
-        gap: 0.0
+        margin: 0.04 # Margin to detect floor contact
+        gap: 0.
         solref: [0.04, 1.]
         solmix: 3.
-        friction: [0.6, 0.0001, 0.0001]
-
+        friction: [0.7, 0.005, 0.0001]
+        
 # === Rollout simulator ===
 sim:
   _target_: sbto.sim.sim_mj_rollout.SimMjRollout
@@ -135,6 +132,7 @@ sim:
       - sbto/models/unitree_g1/contact_pairs/reduced.xml
       - sbto/models/unitree_g1/contact_pairs/robot_obj_collision.xml
       - sbto/models/unitree_g1/contact_pairs/robot_obj.xml
+      - sbto/models/unitree_g1/contact_pairs/robot_chair_collision.xml
       add_body:
       
         largebox:
@@ -146,7 +144,7 @@ sim:
           type: urdf
           # pos: [0., 0., 0.0655]
           urdf_path: sbto/models/chair/chair_scaled_1.0.urdf
-          pos: [0., 0., 0.405]
+          pos: [-0.1, 0.05, -0.16]
           # size: [0.1, 0.1, 0.115]
           size: [0.155, 0.155, 0.17]
           euler: [3.05, 0.11, 1.11]
