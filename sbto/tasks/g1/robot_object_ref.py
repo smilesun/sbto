@@ -228,14 +228,14 @@ class G1RobotObjRef(TaskMjRef):
         )
         self.add_state_cost_from_ref(
             "obj_vel",
-            quaternion_dist_nb,
+            quadratic_cost_nb,
             sim.mj_scene.obj_v_adr,
             weights=cfg.obj_v_weight,
             weights_terminal=cfg.obj_v_weight,
         )
         self.add_state_cost_from_ref(
             "obj_w",
-            quaternion_dist_nb,
+            quadratic_cost_nb,
             sim.mj_scene.obj_w_adr,
             weights=cfg.obj_w_weight,
             weights_terminal=cfg.obj_w_weight,
