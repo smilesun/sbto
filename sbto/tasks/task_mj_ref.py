@@ -11,6 +11,7 @@ from sbto.utils.extract_ref import ReferenceMotion
 class ConfigRefMotion():
         motion_path: str
         t0: float = 0.
+        t_end: float = 0.
         speedup: float = 1.0
         z_offset: float = 0.0
         override_T_sim: bool = True
@@ -32,6 +33,7 @@ class TaskMjRef(TaskMj):
             cfg_ref.motion_path,
             mj_model,
             cfg_ref.t0,
+            cfg_ref.t_end,
             cfg_ref.speedup,
             cfg_ref.z_offset,
         )

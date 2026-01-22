@@ -139,6 +139,7 @@ class ReferenceMotion:
         ref_motion_path: str,
         mj_model: mujoco.MjModel,
         t0: float = 0.,
+        t_end: float = 0.,
         speedup: float = 1.0,
         z_offset: float = 0.0,
         dt: float = 0.
@@ -157,7 +158,7 @@ class ReferenceMotion:
             self.act_qpos_adr = self.mj_model.jnt_qposadr[self.act_ids]
     
         # Apply shift
-        self.shift_start_time(t0)
+        self.trim_traj(t0, t_end)
 
         # Apply z-offset
         if z_offset != 0:
@@ -204,20 +205,30 @@ class ReferenceMotion:
     # Time shifting
     # ------------------------------------------------------------
 
-    def shift_start_time(self, t0: float):
+    def trim_traj(self, t0: float, t_end: float):
         """Trim trajectory so that new time starts at t0."""
-        if t0 <= 0:
+        if t0 <= 0 and t_end <=0:
             return
+        
+        if t_end <= t0:
+            return
+        
+        if t0 > 0:
+            idx = np.searchsorted(self.time, t0)
+            self.qpos = self.qpos[idx:]
+            self.time = self.time[idx:] - self.time[idx]
 
-        idx = np.searchsorted(self.time, t0)
-        self.qpos = self.qpos[idx:]
-        self.time = self.time[idx:] - self.time[idx]
+        if t_end > 0:
+            idx = np.searchsorted(self.time, t_end)
+            self.qpos = self.qpos[:idx]
+            self.time = self.time[:idx]
+
 
     # ------------------------------------------------------------
     # Extend trajectory
     # ------------------------------------------------------------
 
-    def extend_to_length(self, T_needed: int):
+    def trim_to_length(self, T_needed: int):
         """
         Extend the trajectory to have at least T_needed timesteps
         by repeating the final timestep data.
