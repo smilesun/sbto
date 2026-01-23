@@ -60,6 +60,7 @@ def optimize_and_save_data(
     )
 
     rundir = save_results(
+        cfg.data_processing.data_dir,
         sim,
         task,
         solver_state_0,

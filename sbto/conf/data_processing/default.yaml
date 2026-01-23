@@ -1,3 +1,5 @@
+# Exp dir
+data_dir: "./datasets"
 # Save figures
 save_fig: true
 # Save video

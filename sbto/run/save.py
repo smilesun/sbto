@@ -22,7 +22,7 @@ from sbto.data.aggregate import get_top_samples
 
 Array = npt.NDArray[np.float64]
 
-EXP_DIR = "./datasets"
+DATA_DIR = "./datasets"
 TRAJ_FILENAME = "time_x_u_traj"
 ROLLOUT_FILENAME = "rollout_time_x_u_obs_traj"
 SOLVER_STATES_DIR = "./solver_states"
@@ -40,10 +40,12 @@ def get_date_time() -> str:
     now = datetime.now()
     return now.strftime('%Y_%m_%d__%H_%M_%S')
 
-def create_dirs(exp_name: str, description: str = "") -> str:
+def create_dirs(exp_name: str, data_dir: str = "", description: str = "") -> str:
     date = get_date_time()
     run_name = date if description == "" else f"{date}__{description}"
-    exp_result_dir = os.path.join(EXP_DIR, exp_name, run_name)
+    if data_dir == "":
+        data_dir = DATA_DIR
+    exp_result_dir = os.path.join(data_dir, exp_name, run_name)
     
     if os.path.exists(exp_result_dir):
         Warning(f"Directory {exp_result_dir} already exists.")
@@ -196,6 +198,7 @@ def save_mj_model(dir_path: str, mj_spec: mujoco.MjSpec):
         f.write(mj_spec.to_xml())
 
 def save_results(
+    data_dir: str,
     sim: SimMjRollout,
     task: OCPBase,
     solver_state_0: SolverState,
@@ -217,7 +220,7 @@ def save_results(
     remove_keys: List[str] = [],
     ) -> str:
     exp_name = task.__class__.__name__ if not exp_name else exp_name
-    result_dir = create_dirs(exp_name, description)
+    result_dir = create_dirs(exp_name, data_dir, description)
 
     # Save config
     copy_hydra_config(hydra_rundir, result_dir)
