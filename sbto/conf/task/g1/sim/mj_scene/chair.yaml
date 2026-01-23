@@ -17,7 +17,7 @@ cfg:
   - sbto/models/unitree_g1/contact_pairs/robot_chair_collision.xml
   add_body:
   
-    largebox:
+    empty_body:
       type: body_only
       pos: [0.4, 0.0, 0.1]
       euler: [0., 0., 0.]
@@ -33,7 +33,7 @@ cfg:
       mass: 0.6
       rgba: [0.3, 0.3, 0.3, 1.0]
       freejoint: true
-      bodyname: largebox
+      bodyname: empty_body
       group: 1
       priority: 1
       condim: 3

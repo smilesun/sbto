@@ -15,9 +15,11 @@ cfg:
   - sbto/models/unitree_g1/contact_pairs/robot_obj_collision.xml
   - sbto/models/unitree_g1/contact_pairs/robot_obj.xml
   - sbto/models/unitree_g1/contact_pairs/robot_shelf_collision.xml
+  xml_keyframes_path:
+  - sbto/models/unitree_g1/keyframes/g1_29dof_obj.xml
   add_body:
   
-    largebox:
+    empty_body:
       type: body_only
       pos: [0.4, 0.0, 0.1]
       euler: [0., 0., 0.]
@@ -26,14 +28,14 @@ cfg:
       type: urdf
       # pos: [0., 0., 0.0655]
       urdf_path: sbto/models/shelf/shelf_GBR.xml
-      pos: [0.05, 0.0, 0.155]
+      pos: [0.0, 0.05, 0.155]
       # size: [0.1, 0.1, 0.115]
       size: [0.155, 0.155, 0.17]
       euler: [3.05, 0.11, 1.1]
       mass: 0.6
       rgba: [0.3, 0.3, 0.3, 1.0]
       freejoint: true
-      bodyname: largebox
+      bodyname: empty_body
       group: 1
       priority: 1
       condim: 3

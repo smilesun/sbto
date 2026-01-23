@@ -10,9 +10,9 @@
     <pair name="right_foot2_floor" geom1="right_foot2_collision" geom2="floor" solref="0.008 1" friction="1 1" condim="3"/>
     <pair name="right_foot3_floor" geom1="right_foot3_collision" geom2="floor" solref="0.008 1" friction="1 1" condim="3"/>
     <!-- pelvis - floor -->
-    <pair name="pelvis_floor" geom1="pelvis_collision" geom2="floor" condim="1"/>
+    <!-- <pair name="pelvis_floor" geom1="pelvis_collision" geom2="floor" condim="1"/> -->
     <!-- torso - floor -->
-    <pair name="torso_floor" geom1="torso_collision" geom2="floor" condim="1"/>
+    <!-- <pair name="torso_floor" geom1="torso_collision" geom2="floor" condim="1"/> -->
     <!-- foot - foot -->
     <pair name="left_foot_right_foot" geom1="left_foot_box_collision" geom2="right_foot_box_collision" condim="1"/>
     <!-- foot - linkage brace -->
@@ -44,6 +44,14 @@
     <!-- thigh - elbow -->
     <pair name="thigh_left_elbow" geom1="left_thigh_collision" geom2="left_elbow_yaw_collision" condim="1"/>
     <pair name="thigh_right_elbow" geom1="right_thigh_collision" geom2="right_elbow_yaw_collision" condim="1"/>
+    <!-- thigh - thigh -->
+    <pair name="left_thigh_right_thigh" geom1="left_thigh_collision" geom2="right_thigh_collision" condim="1"/>
+    <!-- hip - thigh -->
+    <!-- <pair name="left_hip_right_thigh" geom1="left_hip_collision" geom2="right_thigh_collision" condim="1"/>
+    <pair name="right_hip_left_thigh" geom1="right_hip_collision" geom2="left_thigh_collision" condim="1"/> -->
+    <!-- hip - elbows -->
+    <pair name="hip_left_elbow" geom1="left_hip_collision" geom2="left_elbow_yaw_collision" condim="1"/>
+    <pair name="hip_right_elbow" geom1="right_hip_collision" geom2="right_elbow_yaw_collision" condim="1"/>
   </contact>
 
 </mujoco>
