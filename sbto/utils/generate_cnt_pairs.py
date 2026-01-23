@@ -10,11 +10,15 @@ def generate_mujoco_contact_pairs(obj_geoms):
         ("left_shin_obj", "left_shin_collision"),
         ("right_thigh_obj", "right_thigh_collision"),
         ("left_thigh_obj", "left_thigh_collision"),
+        ("right_hip_obj", "right_hip_collision"),
+        ("left_hip_obj", "left_hip_collision"),
         ("torso_obj", "torso_collision"),
         ("pelvis_obj", "pelvis_collision"),
         ("head_obj", "head_collision"),
         ("left_elbow_yaw_obj", "left_elbow_yaw_collision"),
         ("right_elbow_yaw_obj", "right_elbow_yaw_collision"),
+        ("left_shoulder_yaw_obj", "left_shoulder_yaw_collision"),
+        ("right_shoulder_yaw_obj", "right_shoulder_yaw_collision"),
         ("left_hand_obj", "left_hand_collision"),
         ("right_hand_obj", "right_hand_collision"),
         ("left_wrist_obj", "left_wrist_collision"),
@@ -38,6 +42,7 @@ def generate_mujoco_contact_pairs(obj_geoms):
 
 # Example usage
 obj_list = ["obj", "back_left_leg", "back_right_leg", "front_left_leg", "front_right_leg", "backrest"]
+obj_list = ["obj", "tube_0", "tube_1", "tube_2", "tube_3", "planck_0", "planck_1"]
 xml_output = generate_mujoco_contact_pairs(obj_list)
 
 # Save to XML file
