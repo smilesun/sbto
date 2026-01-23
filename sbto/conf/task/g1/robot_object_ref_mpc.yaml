@@ -1,0 +1,57 @@
+defaults:
+  - g1/mj_scene_ref@mj_scene_ref: box.yaml
+  - g1/sim@sim: default.yaml
+  - g1/sim/mj_scene@sim.mj_scene: box.yaml
+  - g1/cfg_ref@cfg_ref: default.yaml
+  - _self_
+
+_target_: sbto.tasks.g1.robot_object_ref_mpc.G1RobotObjRef
+
+cfg:
+  _target_: sbto.tasks.g1.robot_object_ref_mpc.ConfigG1RobotObjRef
+  
+  t_hand_cnt_before_lift: 0.
+  t_hand_cnt_after_place: 0.
+
+  # --- State costs ---
+  joint_pos_weight: 0.5
+  joint_vel_weight: 0.0
+  base_pos_weight: 30.0
+  base_quat_weight: 5.
+  base_linvel_weight: 0.0
+  base_angvel_weight: 0.0
+
+  # --- Torso pose/vel ---
+  torso_pos_weight: .0
+  torso_quat_weight: .0
+  torso_quat_weight_terminal: .0
+  torso_linvel_weight: 0.0
+  torso_angvel_weight: 0.0
+
+  # --- Foot pose cost ---
+  foot_position: .0
+  foot_orientation: 0.
+
+  # --- Feet Contact cost ---
+  contact_feet_weight: 0.
+  contact_force_feet_weight: 0.
+
+  # --- Hand pose cost ---
+  # (both in world and obj ref frame)
+  hand_position: .0
+  hand_orientation: 0.
+
+  # --- Obj pose cost ---
+  obj_pos_weight: 30.
+  obj_pos_weight_terminal: 30.
+  obj_quat_weight: 5.
+  obj_quat_weight_terminal: 5.
+  obj_v_weight: 0.
+  obj_w_weight: 0.0
+
+  # --- Obj/hands Contact cost ---
+  contact_obj_weight: 0.
+  contact_hands_weight: 0.
+
+  collision_obj_robot: 0.
+  self_collision: 0.
