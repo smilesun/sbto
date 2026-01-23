@@ -49,8 +49,16 @@ class CEM(SamplingBasedSolver):
             mean=self.state.mean[:self.n_dim],
             cov=self.state.cov[:self.n_dim, :self.n_dim],
         )[N:]
+        # ---- Clamp collapsed dimensions ----
+        eps = 1e-7
+        diag = np.diag(self.state.cov)
+        collapsed = diag < eps  # boolean mask
+
+        if np.any(collapsed):
+            self.samples[N:, collapsed] = self.state.mean[None, collapsed]
+
         return self.samples
-        
+    
     def get_elites(self, samples: Array, costs: Array) -> Tuple[Array, IntArray]:
         """
         Returns (elites, elite_idx)
