@@ -288,12 +288,14 @@ class G1RobotObjRef(TaskMjRef):
             weights=cfg.contact_obj_weight,
         )
         # Hands-obj contact
+        contact_hands_weight_arr = np.zeros_like(contact_plan_hands)
+        contact_hands_weight_arr[contact_plan_hands > 0] = contact_hands_weight
         self.add_sensor_cost(
             G1.Sensors.HAND_CONTACTS,
             hamming_dist_nb,
             sub_idx_sensor=G1.Sensors.id_cnt_status_hands,
             ref_values=contact_plan_hands,
-            weights=contact_hands_weight,
+            weights=contact_hands_weight_arr,
         )
         # Collision obj - robot
         self.add_sensor_cost(

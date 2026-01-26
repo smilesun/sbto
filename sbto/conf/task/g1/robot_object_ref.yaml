@@ -10,29 +10,29 @@ _target_: sbto.tasks.g1.robot_object_ref.G1RobotObjRef
 cfg:
   _target_: sbto.tasks.g1.robot_object_ref.ConfigG1RobotObjRef
 
-  t_hand_cnt_before_lift: 0.15
-  t_hand_cnt_after_place: 0.15
+  t_hand_cnt_before_lift: 0.
+  t_hand_cnt_after_place: 0.
 
   # --- State costs ---
-  joint_pos_weight: 0.15
+  joint_pos_weight: 0.25
   joint_vel_weight: 0.01
   base_pos_weight: 5.0
-  base_quat_weight: 1.0
+  base_quat_weight: 1.
 
   # --- Torso pose/vel ---
-  torso_pos_weight: 25.0
-  torso_quat_weight: 2.0
-  torso_quat_weight_terminal: 2.0
-  torso_linvel_weight: 0.1
+  torso_pos_weight: 30.0
+  torso_quat_weight: 3.
+  torso_quat_weight_terminal: 3.
+  torso_linvel_weight: 0.3
   torso_angvel_weight: 0.1
 
   # --- Foot pose cost ---
-  foot_position: 15.0
+  foot_position: 10.0
   foot_orientation: 0.
 
   # --- Feet Contact cost ---
   contact_feet_weight: 0.
-  contact_force_feet_weight: 2.0e-6
+  contact_force_feet_weight: 1.0e-6
 
   # --- Hand pose cost ---
   # (both in world and obj ref frame)
@@ -41,15 +41,15 @@ cfg:
 
   # --- Obj pose cost ---
   obj_pos_weight: 40.
-  obj_pos_weight_terminal: 50.
-  obj_quat_weight: 2.5
-  obj_quat_weight_terminal: 5.
-  obj_v_weight: 0.1
-  obj_w_weight: 0.1
+  obj_pos_weight_terminal: 40.
+  obj_quat_weight: 4.
+  obj_quat_weight_terminal: 4.
+  obj_v_weight: 0.2
+  obj_w_weight: 0.
 
   # --- Obj/hands Contact cost ---
-  contact_obj_weight: 2.
+  contact_obj_weight: 2.0
   contact_hands_weight: 0.5
 
-  collision_obj_robot: 3.
-  self_collision: 1.
+  collision_obj_robot: 2.0
+  self_collision: 1.0
