@@ -105,7 +105,7 @@ def compute_stats_traj(traj_path: str):
     time = np.linspace(0, N*dt, N, endpoint=False)
 
     act_acc, act_acc_ref = compute_total_act_acc(data_processed["actuator_vel"], ref.dof_v, dt)
-    act_acc_ratio = act_acc 
+    act_acc_ratio = act_acc / act_acc_ref
 
     stats = {
         "err_pos_obj": float(compute_obj_pos_error(obj_pos, ref.object_root_pos)),

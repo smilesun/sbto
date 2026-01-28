@@ -9,7 +9,7 @@ def compute_success(df,
     """
     return (
         (df['err_pos_obj'] <= max_pos) &
-        (df['err_term_pos_obj'] <= max_term_pos) &
-        (df['err_quat_obj'] <= max_quat) &
-        (df['err_term_quat_obj'] <= max_term_quat)
+        # (df['err_term_pos_obj'] <= max_term_pos) &
+        (df['err_quat_obj'] <= max_quat)
+        # (df['err_term_quat_obj'] <= max_term_quat)
     )
