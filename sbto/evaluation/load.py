@@ -15,6 +15,7 @@ from sbto.utils.extract_ref import ReferenceMotion
 from sbto.evaluation.errors import *
 from sbto.evaluation.opt_stats import *
 from sbto.evaluation.diversity import *
+from sbto.evaluation.success_rate import compute_success
 
 ###############################################################################
 # CONFIG LOADING INTO A DATAFRAME
@@ -184,6 +185,7 @@ def compute_stats_rundir(rundir: str):
         "T": len(time),
         "min_cost": min_cost,
         "ref_filename": ref_filename,
+        "rundir": rundir,
     }
 
     opt_stats = load_opt_stats_from_rundir(rundir, cfg.solver.cfg.N_samples)
@@ -256,6 +258,9 @@ def load_dataset_with_errors(dataset_root: str, num_workers=None) -> pd.DataFram
 
     df = pd.DataFrame(rows)
     df.insert(0, "algo", "SBTO")
+
+    df["success"] = compute_success(df)
+
     print(f"Final dataset size: {df.shape}")
     return df
 
