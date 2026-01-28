@@ -28,11 +28,11 @@ cfg:
       type: urdf
       # pos: [0., 0., 0.0655]
       urdf_path: sbto/models/shelf/shelf_GBR.xml
-      pos: [0.0, 0.05, 0.155]
+      pos: [-0.05, 0.1, 0.155]
       # size: [0.1, 0.1, 0.115]
       size: [0.155, 0.155, 0.17]
-      euler: [3.05, 0.11, 1.1]
-      mass: 0.6
+      euler: [3.05, 0.11, 0.95]
+      mass: 0.
       rgba: [0.3, 0.3, 0.3, 1.0]
       freejoint: true
       bodyname: empty_body
