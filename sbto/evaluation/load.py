@@ -166,7 +166,7 @@ def compute_stats_rundir(rundir: str):
     base_pos = base_all[:, :3]
     base_quat = base_all[:, -4:]
 
-    act_acc, act_acc_ref = compute_total_act_acc(data["actuator_vel"], ref.dof_v, dt)
+    act_acc, act_acc_ref = compute_total_act_acc(data["actuator_pos"], ref.dof_pos, dt)
     act_acc_ratio = act_acc / act_acc_ref
 
     stats = {

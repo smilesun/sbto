@@ -104,7 +104,7 @@ def compute_stats_traj(traj_path: str):
     N = len(obj_pos)
     time = np.linspace(0, N*dt, N, endpoint=False)
 
-    act_acc, act_acc_ref = compute_total_act_acc(data_processed["actuator_vel"], ref.dof_v, dt)
+    act_acc, act_acc_ref = compute_total_act_acc(data_processed["actuator_pos"], ref.dof_pos, dt)
     act_acc_ratio = act_acc / act_acc_ref
 
     stats = {
@@ -122,7 +122,7 @@ def compute_stats_traj(traj_path: str):
         "act_acc_ratio": float(act_acc_ratio),
         "T": len(time),
         "task.cfg_ref.motion_path": ref_motion_path,
-        "ref_filename": ref_motion_filename
+        "ref_filename": ref_motion_filename,
     }
 
     opt_steps = data["opt_steps"].squeeze()
