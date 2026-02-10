@@ -1,5 +1,5 @@
 defaults:
-  - g1/mj_scene_ref@mj_scene_ref: box.yaml
+  - g1/mj_scene_ref@mj_scene_ref: box_omniretarget.yaml
   - g1/sim@sim: default.yaml
   - g1/sim/mj_scene@sim.mj_scene: box.yaml
   - g1/cfg_ref@cfg_ref: default.yaml
