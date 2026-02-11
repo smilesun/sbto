@@ -17,7 +17,7 @@ class SimRolloutBase(ABC):
         Nv: int,
         Nu: int,
         T: int,
-        Nknots: int = 0,
+        step_knots: int = 1,
         interp_kind: str = "linear",
         scaling: Optional[Scaling] = None,
         ):
@@ -27,7 +27,8 @@ class SimRolloutBase(ABC):
         self.Nv = Nv
         self.Nu = Nu
         self.Nx = self.Nq + self.Nv
-        self.Nknots = Nknots if T >= Nknots > 0 else T
+        self.step_knots = step_knots
+        self.Nknots = T // step_knots
         # x_0 not a decision variable
         self.Nvars_x = self.Nx * T
         self.Nvars_u = self.Nu * self.Nknots
@@ -35,7 +36,7 @@ class SimRolloutBase(ABC):
         # spline interpolation
         self.interp_kind = interp_kind
         self.t_all = np.int32(np.ceil(np.linspace(0, 1, T, endpoint=True) * T))
-        self.t_knots = np.int32(np.ceil(np.linspace(0, 1, Nknots, endpoint=True) * T))
+        self.t_knots = np.int32(np.ceil(np.linspace(0, 1, self.Nknots, endpoint=True) * T))
 
         self.x_0 = np.zeros((self.Nx, ))
         # pd target scaling to joint range

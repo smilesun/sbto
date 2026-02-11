@@ -22,8 +22,8 @@ class ConfigMjRollout():
     T : int
         Number of control simulation steps per rollouts.
     
-    Nknots : int
-        Number of control or interpolation knots used in trajectory generation.
+    step_knots : int
+        Number of sim step between two knots
     
     keyframe_x0 : str
         Name of a keyframe_x0 to use for initializing simulation state.
@@ -38,17 +38,12 @@ class ConfigMjRollout():
         Number of thread for parallel rollouts (defaullt to cpu_count).
     """
     T: int
-    Nknots: int = 0
+    step_knots: int = 25
     keyframe_x0: str = ""
     interp_kind: str = "linear"
     scaling_kind: str = ""
     Nthread: int = -1
     _chunk_size: int = 2
-    _target_: str = "sbto.sim.sim_mj_rollout.SimMjRollout"
-
-    # def __post_init__(self):
-    #     self._filename = "config_sim_rollout.yaml"
-    #     self.class_path = "sbto.sim.sim_mj_rollout.SimRolloutMj"
 
 class SimMjRollout(SimRolloutBase):
     def __init__(
@@ -65,7 +60,7 @@ class SimMjRollout(SimRolloutBase):
             self.mj_scene.Nv,
             self.mj_scene.Nu,
             cfg.T,
-            cfg.Nknots,
+            cfg.step_knots,
             cfg.interp_kind,
             scaling,
             )
