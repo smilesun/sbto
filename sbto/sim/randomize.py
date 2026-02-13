@@ -272,7 +272,7 @@ class RandomizeRollout:
         if sim.N_allocated != N:
             sim._allocate_data_arrays(N, T)
 
-        sim.initial_states[:, 1:] = states
+        sim.x_rollout_full[:, 0, 1:] = states
 
         pd_target = states[:, sim.mj_scene.act_qposadr]
         pd_traj = np.tile(pd_target[:, None, :], (1, T, 1))
@@ -296,6 +296,8 @@ class RandomizeRollout:
             valid = self._validate_states(states)
             if np.any(valid):
                 sim.set_initial_state(states[np.argmax(valid)])
+                sim.N_allocated = 0
+                sim.mj_datas = []
                 return
 
         print(
