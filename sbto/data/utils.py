@@ -10,6 +10,7 @@ ROLLOUT_FILENAME = "rollout_time_x_u_obs_traj"
 SOLVER_STATES_DIR = "./solver_states"
 ALL_SAMPLES_COSTS_FILENAME = "samples_costs"
 OPT_STATS_FILENAME = "optimization_stats"
+CONFIG_NAME = "config"
 
 def get_filename_from_path(path: str):
     _, filename = os.path.split(path)
@@ -23,50 +24,24 @@ def load_yaml(yaml_path):
             d = yaml.safe_load(f)
     return d
 
-def get_config_dict_from_rundir(run_dir: str):
-    CONFIG_NAME = "config"
-    all_cfg_yaml = glob.glob(
-        f"{run_dir}/*/{CONFIG_NAME}.yaml",
-        include_hidden=True,
-        recursive=True
-        )
-    all_cfg_yaml += glob.glob(
-        f"{run_dir}/*/*/{CONFIG_NAME}.yaml",
-        include_hidden=True,
-        recursive=True
-        )
-    all_cfg_yaml += glob.glob(
-        f"{run_dir}/*{CONFIG_NAME}.yaml",
-        include_hidden=True,
-        recursive=True
-        )
-    if len(all_cfg_yaml) > 0:
-        return load_yaml(all_cfg_yaml[0])
-    else:
-        return {}
-    
 def get_config_path_from_rundir(run_dir: str):
-    CONFIG_NAME = "config"
-    all_cfg_yaml = glob.glob(
-        f"{run_dir}/*/{CONFIG_NAME}.yaml",
+    all_cfg_path = glob.glob(
+        f"{run_dir}/**/{CONFIG_NAME}.yaml",
         include_hidden=True,
         recursive=True
         )
-    all_cfg_yaml += glob.glob(
-        f"{run_dir}/*/*/{CONFIG_NAME}.yaml",
-        include_hidden=True,
-        recursive=True
-        )
-    all_cfg_yaml += glob.glob(
-        f"{run_dir}/*{CONFIG_NAME}.yaml",
-        include_hidden=True,
-        recursive=True
-        )
-    if len(all_cfg_yaml) > 0:
-        return all_cfg_yaml[0]
+    if len(all_cfg_path) > 0:
+        return all_cfg_path[0]
     else:
         return ""
-    
+
+def get_config_dict_from_rundir(run_dir: str):
+    cfg_path = get_config_path_from_rundir(run_dir)
+    if cfg_path:
+        return load_yaml(cfg_path)
+    else:
+        return {}
+
 def get_opt_stats_path_from_rundir(run_dir: str):
     FILE_NAME = "optimization_stats"
     all_paths = glob.glob(
@@ -81,17 +56,7 @@ def get_opt_stats_path_from_rundir(run_dir: str):
     
 def get_xml_path_from_rundir(run_dir: str):
     all_xml_paths = glob.glob(
-        f"{run_dir}/*/*.xml",
-        include_hidden=True,
-        recursive=True
-        )
-    all_xml_paths += glob.glob(
-        f"{run_dir}/*/*/.xml",
-        include_hidden=True,
-        recursive=True
-        )
-    all_xml_paths += glob.glob(
-        f"{run_dir}/*.xml",
+        f"{run_dir}/**/*.xml",
         include_hidden=True,
         recursive=True
         )
