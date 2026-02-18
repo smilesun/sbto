@@ -188,11 +188,13 @@ class SimMjRollout(SimRolloutBase):
             self.x_rollout is None or 
             self._empty_data
             ):
-            steps_to_skip = 0
+            self.steps_to_skip = 0
             self._last_steps_to_skip = 0
         else:
-            steps_to_skip = self.first_divergence_index_numba(u_traj, self._last_steps_to_skip)
-            self._last_steps_to_skip = steps_to_skip
+            # one iteration delay to ensure that the correct data
+            # is in x_rollout_full
+            self.steps_to_skip = self._last_steps_to_skip
+            self._last_steps_to_skip = self.first_divergence_index_numba(u_traj, self._last_steps_to_skip)
 
     def _rollout_dynamics(self, u_traj: Array, with_x0) -> Tuple[Array, Array, Array]:
         """
