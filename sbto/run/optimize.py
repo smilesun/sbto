@@ -154,14 +154,14 @@ def optimize_incremental_opt(
 
     for N_knots_to_opt in pbar_knots:
         nit = 0
-        max_std_diag = np.inf
+        increment_value = np.inf
         
         t_end = sim.t_knots[N_knots_to_opt-1]
-        N_var_to_opt = N_knots_to_opt * sim.Nu
-        solver.opt_first_dim(N_var_to_opt)
-        all_knots_optimized = N_knots_to_opt == sim.Nknots
+        n_dim = N_knots_to_opt * sim.Nu
+        solver.opt_first_dim(n_dim)
 
         # For last iterations
+        all_knots_optimized = N_knots_to_opt == sim.Nknots
         if all_knots_optimized:
             min_std_next = min_std_final
             N_max_it_per_knots *= 2
@@ -169,34 +169,38 @@ def optimize_incremental_opt(
         pbar_knots.set_description_str(f"Opt. first {N_knots_to_opt} knots")
         pbar_it = trange(N_max_it_per_knots, leave=False)
 
-        while min_std_next < max_std_diag and nit < N_max_it_per_knots:
+        while min_std_next < increment_value and nit < N_max_it_per_knots:
+
             opt_stats.add_iteration(N_knots_to_opt, 0)
-            # Reset best knots when all knots are optimized
+
+            # Reset best samples when all knots are optimized
+            # That ensures that the best samples are full dimensions
             if reset_best_knots_all and all_knots_optimized:
-                solver.state.min_cost = np.inf
                 solver.state.min_cost_all = np.inf
                 reset_best_knots_all = False
-
+            
+            # Sample and compute cost
             samples = solver.get_samples()
-            if all_knots_optimized:
-                all_samples.append(samples.copy())
             costs = compute_cost_t_end(samples, sim, task, t_end=t_end)
+            
+            # Save samples and cost
             all_costs.append(costs)
             best_samples_it.append(solver.state.best.copy())
+            if all_knots_optimized: all_samples.append(samples.copy())
 
+            # Update solver distribution
             solver.update(samples, costs)
-
-            max_std_diag = np.max(np.diag(solver.state.cov)[:N_var_to_opt])
-            nit += 1
-            nit_total += 1
+            increment_value = solver.increment_value()
 
             pbar_postfix["min_cost"] = solver.state.min_cost_all
             pbar_postfix["it"] = nit_total
-            pbar_it_postfix["std_max"] = max_std_diag
+            pbar_it_postfix["std_max"] = increment_value
             pbar_it_postfix["cost"] = solver.state.min_cost
             pbar_knots.set_postfix(pbar_postfix)
             pbar_it.set_postfix(pbar_it_postfix)
             pbar_it.update(1)
+            nit += 1
+            nit_total += 1
 
             opt_stats.iterations[opt_stats.i].n_sim_steps_rollout = sim.nstep_allocated
             opt_stats.end_iteration()

@@ -134,3 +134,10 @@ class SamplingBasedSolver(ABC):
         Including minimum cost and best control.
         """
         pass
+
+    def increment_value(self) -> float:
+        """
+        Compute value to check if the number of 
+        dimension should be incremented.
+        """
+        return np.max(np.diag(self.state.cov[:self.n_dim, :self.n_dim]))
