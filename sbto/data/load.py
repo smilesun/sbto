@@ -25,5 +25,5 @@ def get_final_state_from_rundir(rundir: str, solver: SamplingBasedSolver) -> Sol
     return _get_state_from_rundir(rundir, solver, FINAL_SOLVER_STATE_SUFFIX)
 
 def get_best_trajectory_from_rundir(rundir: str):
-    path = os.path.join(rundir, BEST_TRAJECTORY_FILENAME)
+    path = os.path.join(rundir, f"{BEST_TRAJECTORY_FILENAME}.npz")
     return np.load(path)
