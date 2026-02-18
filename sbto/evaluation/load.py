@@ -170,6 +170,7 @@ def compute_all_stats(rundir, cfg, ref_data):
         "rundir": rundir,
         "T": len(data["time"]),
         "min_cost": data["c"],
+        "dt": ref_data["dt"]
     }
 
     stats.update(compute_errors(data, ref_data))

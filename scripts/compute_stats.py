@@ -21,14 +21,20 @@ def main(
 
     print("=== Smoothness ===")
     smoothness = data[data["success"]]["act_acc_ratio"].values.mean()
-    print(f" {smoothness}")
+    print(f" {smoothness:.2f}")
 
     print("=== Compute ===")
     T = data[data["success"]]["T"].values
+    dt = data[data["success"]]["dt"].values
+    duration = T * dt
     sim_steps = data[data["success"]]["total_sim_timesteps"].values
-    avg_compute_per_timestep_success = np.mean(sim_steps / T)
-    print(f" {avg_compute_per_timestep_success}")
+    opt_duration = data[data["success"]]["opt_duration"].values
     
+    avg_sim_step_per_sec_success = np.mean(sim_steps / duration)
+    avg_opt_duration_per_sec_success = np.mean(opt_duration / duration)
+    print(f" Sim step per second of motion: {avg_sim_step_per_sec_success:.2f} (sim steps/s)")
+    print(f" Optimization time per second of motion: {avg_opt_duration_per_sec_success:.2f} (s)")
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Evaluate SBTO dataset statistics."

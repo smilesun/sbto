@@ -149,6 +149,7 @@ def optimize_incremental_opt(
     reset_best_knots_all = True
     pbar_knots = trange(2, sim.Nknots+1, desc="Optimizing", leave=True)
     pbar_postfix = {}
+    pbar_it_postfix = {}
     nit_total = 0
 
     for N_knots_to_opt in pbar_knots:
@@ -169,7 +170,7 @@ def optimize_incremental_opt(
         pbar_it = trange(N_max_it_per_knots, leave=False)
 
         while min_std_next < max_std_diag and nit < N_max_it_per_knots:
-            opt_stats.add_iteration(N_knots_to_opt, t_end)
+            opt_stats.add_iteration(N_knots_to_opt, 0)
             # Reset best knots when all knots are optimized
             if reset_best_knots_all and all_knots_optimized:
                 solver.state.min_cost = np.inf
@@ -184,18 +185,21 @@ def optimize_incremental_opt(
             best_samples_it.append(solver.state.best.copy())
 
             solver.update(samples, costs)
-            opt_stats.end_iteration()
 
             max_std_diag = np.max(np.diag(solver.state.cov)[:N_var_to_opt])
             nit += 1
             nit_total += 1
 
-            pbar_it.update(1)
             pbar_postfix["min_cost"] = solver.state.min_cost_all
-            pbar_postfix["cost"] = solver.state.min_cost
-            pbar_postfix["std_max"] = max_std_diag
             pbar_postfix["it"] = nit_total
+            pbar_it_postfix["std_max"] = max_std_diag
+            pbar_it_postfix["cost"] = solver.state.min_cost
             pbar_knots.set_postfix(pbar_postfix)
+            pbar_it.set_postfix(pbar_it_postfix)
+            pbar_it.update(1)
+
+            opt_stats.iterations[opt_stats.i].n_sim_steps_rollout = sim.nstep_allocated
+            opt_stats.end_iteration()
         
         del pbar_it
 
