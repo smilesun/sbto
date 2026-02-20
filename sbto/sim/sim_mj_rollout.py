@@ -100,7 +100,6 @@ class SimMjRollout(SimRolloutBase):
         # mujoco rollout variables
         self._chunk_size = cfg._chunk_size
         self._persistent_pool = True
-        self._last_steps_to_skip = 0
 
     @property
     def duration(self):
@@ -189,12 +188,10 @@ class SimMjRollout(SimRolloutBase):
             self._empty_data
             ):
             self.steps_to_skip = 0
-            self._last_steps_to_skip = 0
         else:
             # one iteration delay to ensure that the correct data
             # is in x_rollout_full
-            self.steps_to_skip = self._last_steps_to_skip
-            self._last_steps_to_skip = self.first_divergence_index_numba(u_traj, self._last_steps_to_skip)
+            self.steps_to_skip = self.first_divergence_index_numba(u_traj, self.steps_to_skip)
 
     def _rollout_dynamics(self, u_traj: Array, with_x0) -> Tuple[Array, Array, Array]:
         """

@@ -1,8 +1,8 @@
 defaults:
-  - task: g1/gait
+  - task: g1/robot_object_ref
   - solver: cem
   - slurm: none
-  - warm_start: none
+  - warm_start: incremental
   - data_processing: default
   - random: none
   - _self_
@@ -12,4 +12,4 @@ exp_name: ""
 # Description (as a suffix to rundir)
 description: ""
 # If a reference is provided, initial knots are taken from the reference
-init_knots_from_ref: false
+init_knots_from_ref: True
