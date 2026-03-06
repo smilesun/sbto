@@ -67,7 +67,8 @@ class CBO(SamplingBasedSolver):
         self._per_particle_consensus = compute_per_particle_target_consensus(
             costs, samples, neighborhood_kernel_neg_log_eval,
             self.cfg.beta,
-            self.cfg.scalar_reg_loss_weight_neighborhood_kernel)
+            self.cfg.scalar_reg_loss_weight_neighborhood_kernel,
+            True)  # FIXME: put this into configuration
 
         return argmin, cmin
 

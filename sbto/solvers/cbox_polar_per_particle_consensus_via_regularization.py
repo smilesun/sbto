@@ -15,6 +15,7 @@ def compute_per_particle_target_consensus(
     neighborhood_kernel_neg_los_eval: jnp.ndarray,  # N*N
     temperature: float,
     scalar_reg_loss_weight_neighborhood_kernel: float,
+    flag_auto_weight: bool
 ) -> tuple[jnp.ndarray, jnp.ndarray]:
 
     """
@@ -64,6 +65,12 @@ def compute_per_particle_target_consensus(
         "neighborhood_kernel_neg_los_eval|mean| / costs|mean| ratio: {}", ratio
     )
 
+    scalar_reg_loss_weight_neighborhood_kernel = lax.cond(
+        jnp.asarray(flag_auto_weight),
+        lambda _: 1.0 / ratio,
+        lambda _: jnp.asarray(scalar_reg_loss_weight_neighborhood_kernel),
+        operand=None,
+    )
 
     loss_regularized = - scalar_reg_loss_weight_neighborhood_kernel * \
         neighborhood_kernel_neg_los_eval \
