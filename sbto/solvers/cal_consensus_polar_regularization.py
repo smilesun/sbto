@@ -8,14 +8,13 @@ from pathlib import Path
 from jax import debug, jit, lax
 from jax.scipy.special import logsumexp
 
-
 @jit
-def compute_polar_consensus(
+def compute_per_particle_target_consensus(
     costs: jnp.ndarray,  # N
-    x: jnp.ndarray,  # N * H * Dof
-    neg_log_eval: jnp.ndarray,  # N*N
+    u: jnp.ndarray,  # N * H * Dof
+    neighborhood_kernel_neg_los_eval: jnp.ndarray,  # N*N
     temperature: float,
-    polar_kernel_reg_loss_weight: float,
+    scalar_reg_loss_weight_neighborhood_kernel: float,
 ) -> tuple[jnp.ndarray, jnp.ndarray]:
 
     """
@@ -23,45 +22,53 @@ def compute_polar_consensus(
     Compute one target consensus per particle for polarized CBO.
 
     Uses a column-wise softmax over the regularized loss
-    ``-polar_kernel_reg_loss_weight * neg_log_eval - costs / temperature``.
+
+    ``-scalar_reg_loss_weight_neighborhood_kernel *
+    neighborhood_kernel_neg_los_eval - costs / temperature``.
+
     Column ``j`` gives weights for particle ``j``'s consensus, and the output
-    keeps the same tail dimensions as ``x``.
+    keeps the same tail dimensions as ``u``.
 
     Args:
         costs: Array of shape ``(N,)`` with one objective value per particle.
 
-        x: Particle states/trajectories of shape ``(N, H, DoF)``
+        u: Particle states/trajectories of shape ``(N, H, DoF)``
         (or ``(N, ...)``).
             Axis 0 indexes particles;
             remaining axes are averaged into consensus.
 
-        neg_log_eval: Pairwise negative-log kernel matrix of shape ``(N, N)``.
-            Entry ``(i, j)`` is the regularization term
+        neighborhood_kernel_neg_los_eval: Pairwise negative-log kernel matrix
+            of shape ``(N, N)``.
+            Entry ``(i, j)`` is the neighborhood regularization term
             between particles ``i`` and ``j``.
 
         temperature: Positive softmax temperature for cost weighting.
             Smaller values make consensus focus more on lower-cost particles.
 
-        polar_kernel_reg_loss_weight: Weight of the pairwise regularization
-            term. ``0`` removes kernel regularization;
+        scalar_reg_loss_weight_neighborhood_kernel: Weight of the pairwise
+            regularization term. ``0`` removes neighbor kernel regularization;
             larger values increase its influence.
 
     Returns:
         Consensus array with shape ``(N, H, DoF)``
-            (or ``(N, ...)`` matching ``x`` tail).
+            (or ``(N, ...)`` matching ``u`` tail).
             Row ``j`` is particle ``j``'s consensus state.
     """
 
-    loss_regularized = - polar_kernel_reg_loss_weight * neg_log_eval \
-        - 1.0 / temperature * costs[:, None]
-    neg_log_mean = jnp.mean(jnp.abs(neg_log_eval))
+    loss_regularized = - scalar_reg_loss_weight_neighborhood_kernel * \
+        neighborhood_kernel_neg_los_eval \
+        - 1.0 / temperature * costs[:, None]  # broadcast new dimension
+
+    # calculate the ratio between neighborhood kernel as loss regularization vs
+    # original cost/loss.
+    neg_log_mean = jnp.mean(jnp.abs(neighborhood_kernel_neg_los_eval))
     cost_mean = jnp.mean(jnp.abs(costs))
     ratio = neg_log_mean / (cost_mean + 1e-12)
     debug.print(
-        "neg_log_eval|mean| / costs|mean| ratio: {}", ratio
+        "neighborhood_kernel_neg_los_eval|mean| / costs|mean| ratio: {}", ratio
     )
 
-    # neg_log_eval.shape = N * N  is symmetric
+    # neighborhood_kernel_neg_los_eval.shape = N * N  is symmetric
     # costs[:, None].shape = N * 1
     # broadcast of costs from cost (N,) to cost[:, None] with another array of
     # shape (N,N):
@@ -106,25 +113,28 @@ def compute_polar_consensus(
     # there should be N*N weights
     # jax.debug.print("col_sums: {}", jnp.sum(weights, axis=0))
 
-    # Sanity check: when polar_kernel_reg_loss_weight == 0,
+    # Sanity check: when scalar_reg_loss_weight_neighborhood_kernel == 0,
     # each column should match.
 
     def _check_columns(_):
         max_diff = jnp.max(jnp.abs(weights - weights[:, :1]))
         def _raise(_):
             raise ValueError(
-                "polar_kernel_reg_loss_weight=0 but weights columns differ"
+                "scalar_reg_loss_weight_neighborhood_kernel=0 but \
+                weights columns differ"
             )
 
         def _bad(_):
             debug.print(
-                "polar kernel reg weight is 0 but weights columns differ (max diff: {})",
+                "polar kernel reg weight is 0 but weights columns \
+                differ (max diff: {})",
                 max_diff,
             )
             debug.callback(_raise, None)
             return None
 
-        # If column differences are above tolerance, run `_bad` (print + raise);
+        # If column differences are above tolerance,
+        # run `_bad` (print + raise);
         # otherwise do nothing.
         return lax.cond(
             max_diff > 1e-6,
@@ -134,69 +144,67 @@ def compute_polar_consensus(
         )
 
     # Only run the column-consistency check when regularization weight is zero.
+    # i.e. set this scalar to 0 to debug if code is correct
     # With non-zero regularization, different columns are expected.
     _ = lax.cond(
-        polar_kernel_reg_loss_weight == 0,
+        scalar_reg_loss_weight_neighborhood_kernel == 0,
         _check_columns,
         lambda _: None,
         operand=None,
     )
 
-    extra_dims = x.ndim - 1
+    extra_dims = u.ndim - 1
     if extra_dims > 0:
         # broadcast such that H*DoF are treated equally
         weights = jnp.reshape(weights, weights.shape + (1,) * extra_dims)
-        # (1,) * 2 result in (1,1), weights.shape will have two extra dimensino
+        # (1,) * 2 result in (1,1), weights.shape will have two extra dimension
 
     # Weights are normalized per column (axis=0 above), so each column j gives
     # the weights for **target consensus of particle j**.
 
-    # Broadcast x along a new column axis so weights[i, j] multiplies x[i].
-    # x: N*H*DoF, x[:, None, ...] is N*1*H*DoF
+    # Broadcast u along a new column axis so weights[i, j] multiplies u[i].
+    # u: N*H*DoF, u[:, None, ...] is N*1*H*DoF
     # weights.shape: N*N*1*1 after reshape above
-    # x[:, None, ...] * weights -> N*N*H*DoF, sum over axis=0 (i) -> N*H*DoF
-    consensus = jnp.sum(x[:, None, ...] * weights, axis=0)
+    # u[:, None, ...] * weights -> N*N*H*DoF, sum over axis=0 (i) -> N*H*DoF
+    consensus = jnp.sum(u[:, None, ...] * weights, axis=0)
     # consensus.shape (N, H, DoF)
 
-    def _check_consensus_rows(_):
-        max_diff = jnp.max(jnp.abs(consensus - consensus[:1]))
-
-        def _raise(_):
-            """
-            used in function _bad(_)
-            """
-            raise ValueError(
-                "polar_kernel_reg_loss_weight=0 but consensus rows differ"
-            )
-
-        def _bad(_):
-            """
-            used in condition
-            """
-            debug.print(
-                "polar kernel reg weight is 0 but consensus rows \
-                differ (max diff: {})",
-                max_diff,
-            )
-            debug.callback(_raise, None)
-            return None
-
-        # If consensus rows differ beyond tolerance,
-        # run `_bad` (print + raise);
-        # otherwise do nothing.
-        return lax.cond(
-            max_diff > 1e-6,
-            _bad,  # if max_diff > 1e-6
-            lambda _: None, # otherwise
-            operand=None,
-        )
-
     # Only enforce identical consensus rows when regularization weight is zero.
+    # i.e. to debug/infer if this implementation is consistent/correct
     # For non-zero regularization, per-particle consensus is allowed to differ.
     _ = lax.cond(
-        polar_kernel_reg_loss_weight == 0,
+        scalar_reg_loss_weight_neighborhood_kernel == 0,
         _check_consensus_rows,
+        lambda _: None,
+        operand=consensus,
+    )
+    return consensus
+
+
+def _check_consensus_rows(consensus: jnp.ndarray) -> None:
+    """Raise when consensus rows are not identical under zero regularization"""
+    max_diff = jnp.max(jnp.abs(consensus - consensus[:1]))
+
+    def _raise(_):
+        raise ValueError(
+            "scalar_reg_loss_weight_neighborhood_kernel=0 but \
+            consensus rows differ"
+        )
+
+    def _bad(_):
+        debug.print(
+            "polar kernel reg weight is 0 but consensus rows differ \
+            (max diff: {})",
+            max_diff,
+        )
+        debug.callback(_raise, None)
+        return None
+
+    # If consensus rows differ beyond tolerance, run `_bad` (print + raise);
+    # otherwise do nothing.
+    return lax.cond(
+        max_diff > 1e-6,
+        _bad,
         lambda _: None,
         operand=None,
     )
-    return consensus
