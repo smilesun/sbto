@@ -82,7 +82,9 @@ class CBO(SamplingBasedSolver):
             self._x[:] = self.state.mean + self.cfg.delta * noise
             return self._x
 
-        noise = np.sqrt(self._delta) * self.sampler.sample(
+        # use n_dim to optimize only the first few dimensions
+
+        noise = np.sqrt(self._dt) * self._delta * self.sampler.sample(
             mean=self._zeros[:self.n_dim],
             cov=self._Id[:self.n_dim, :self.n_dim],
         )
@@ -96,7 +98,7 @@ class CBO(SamplingBasedSolver):
         if self.cfg.noise_model == "isotropic":
             noise = isotropic_noise = jnp.multiply(
               drift_norm_nx1, noise) # drift_norm [Nx1] * noise [N x D]
- 
+
         elif self.cfg.noise_model == "anistropic":
             noise = jnp.multiply(drift, noise) # drift [N x D] vs noise[N x D]
 
