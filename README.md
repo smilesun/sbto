@@ -6,6 +6,8 @@ Sampling Based Trajectory Optimization (SBTO)
 - python=3.12.11
 - numpy=2.3.4
 - mujoco=3.3.7
+- jax=0.7.2
+- jaxlib=0.7.2
 - numba=0.62.1
 - scipy=1.16.2
 - matplotlib=3.10.6
@@ -21,7 +23,7 @@ https://github.com/Atarilab/sbto.git
 cd sbto
 conda create -n sbto python=3.12.11
 conda activate sbto
-pip install -y --upgrade pip mujoco==3.3.7 numba==0.62.1 scipy==1.16.2 matplotlib==3.10.6 pyyaml==6.0.3 hydra-core==1.3.2 seaborn==0.13.2
+pip install -y --upgrade pip mujoco==3.3.7 jax==0.7.2 jaxlib==0.7.2 numba==0.62.1 scipy==1.16.2 matplotlib==3.10.6 pyyaml==6.0.3 hydra-core==1.3.2 seaborn==0.13.2
 conda install -c conda-forge opencv
 pip install -e .
 ```
