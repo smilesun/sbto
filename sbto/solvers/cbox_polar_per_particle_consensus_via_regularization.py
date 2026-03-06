@@ -55,10 +55,6 @@ def compute_per_particle_target_consensus(
             Row ``j`` is particle ``j``'s consensus state.
     """
 
-    loss_regularized = - scalar_reg_loss_weight_neighborhood_kernel * \
-        neighborhood_kernel_neg_los_eval \
-        - 1.0 / temperature * costs[:, None]  # broadcast new dimension
-
     # calculate the ratio between neighborhood kernel as loss regularization vs
     # original cost/loss.
     neg_log_mean = jnp.mean(jnp.abs(neighborhood_kernel_neg_los_eval))
@@ -67,6 +63,11 @@ def compute_per_particle_target_consensus(
     debug.print(
         "neighborhood_kernel_neg_los_eval|mean| / costs|mean| ratio: {}", ratio
     )
+
+
+    loss_regularized = - scalar_reg_loss_weight_neighborhood_kernel * \
+        neighborhood_kernel_neg_los_eval \
+        - 1.0 / temperature * costs[:, None]  # broadcast new dimension
 
     # neighborhood_kernel_neg_los_eval.shape = N * N  is symmetric
     # costs[:, None].shape = N * 1
