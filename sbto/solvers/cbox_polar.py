@@ -3,6 +3,7 @@ import numpy as np
 import numpy.typing as npt
 from typing import Tuple
 from dataclasses import dataclass
+import jax.numpy as jnp
 
 from sbto.solvers.solver_base import SamplingBasedSolver, SolverState, ConfigSolver
 from sbto.solvers.cbox_polar_per_particle_consensus_via_regularization \
@@ -26,7 +27,8 @@ class ConfigCBO(ConfigSolver):
     delta: float = 1.e-2
     dt: float = 1.e-2
     kappa: float = 1.
-    scalar_reg_loss_weight_neighborhood_kernel: float 1.
+    scalar_reg_loss_weight_neighborhood_kernel: float = 1.
+    _target_: str = "sbto.solvers.cbox_polar.CBO"
 
 
 class CBO(SamplingBasedSolver):
@@ -36,6 +38,7 @@ class CBO(SamplingBasedSolver):
     def __init__(self, D, cfg: ConfigCBO):
         super().__init__(D, cfg)
         self.Id = np.eye(D)
+        self.logs = {}
 
         self.first_it = True
         self._zeros = np.zeros(D)
@@ -53,11 +56,11 @@ class CBO(SamplingBasedSolver):
         w = np.exp(exponents)
         s = w.sum()
         w /= s
-        self._consensus[:self.n_dim] = w @ samples[:, :self.n_dim]
+        self._consensus[:, :self.n_dim] = w @ samples[:, :self.n_dim]
 
         neighborhood_kernel_neg_log_eval = gaussian_kernel_neg_log(
-            jnp.asarray(samples[:, None, :, :]),
-            jnp.asarray(samples[None, :, :, :]),
+            jnp.asarray(samples[:, None, :]),
+            jnp.asarray(samples[None, :, :]),
             kappa=float(self.cfg.kappa),
         )
 
@@ -121,7 +124,7 @@ class CBO(SamplingBasedSolver):
         """
         arg_min, min_cost = self.update_mean(samples, costs)
         best = samples[arg_min]
-        self.update_min_cost_best(self.state, min_cost, best)
+        self.update_min_cost_best(self.state, min_cost, best, best_id=int(arg_min))
         self.update_distrib_param(self.state, samples)
 
         self.first_it = False

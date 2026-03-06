@@ -1,0 +1,15 @@
+_target_: sbto.solvers.cbox_polar.CBO
+cfg:
+  _target_: sbto.solvers.cbox_polar.ConfigCBO
+  N_samples: 1024
+  N_it: 100
+  beta: 1.0
+  noise_model: anistropic
+  delta: 0.01
+  dt: 0.01
+  kappa: 1.0
+  scalar_reg_loss_weight_neighborhood_kernel: 1.0
+  sigma0: 0.25
+  quasi_random: False
+  seed: 0
+  sampler: normal
