@@ -17,7 +17,10 @@ def compute_polar_consensus(
     temperature: float,
     polar_kernel_reg_loss_weight: float,
 ) -> tuple[jnp.ndarray, jnp.ndarray]:
-    """Compute one consensus trajectory per particle for polarized CBO.
+
+    """
+
+    Compute one target consensus per particle for polarized CBO.
 
     Uses a column-wise softmax over the regularized loss
     ``-polar_kernel_reg_loss_weight * neg_log_eval - costs / temperature``.
@@ -26,18 +29,27 @@ def compute_polar_consensus(
 
     Args:
         costs: Array of shape ``(N,)`` with one objective value per particle.
-        x: Particle states/trajectories of shape ``(N, H, DoF)`` (or ``(N, ...)``).
-            Axis 0 indexes particles; remaining axes are averaged into consensus.
+
+        x: Particle states/trajectories of shape ``(N, H, DoF)``
+        (or ``(N, ...)``).
+            Axis 0 indexes particles;
+            remaining axes are averaged into consensus.
+
         neg_log_eval: Pairwise negative-log kernel matrix of shape ``(N, N)``.
-            Entry ``(i, j)`` is the regularization term between particles ``i`` and ``j``.
-        temperature: Positive softmax temperature for cost weighting. Smaller values
-            make consensus focus more on lower-cost particles.
-        polar_kernel_reg_loss_weight: Weight of the pairwise regularization term.
-            ``0`` removes kernel regularization; larger values increase its influence.
+            Entry ``(i, j)`` is the regularization term
+            between particles ``i`` and ``j``.
+
+        temperature: Positive softmax temperature for cost weighting.
+            Smaller values make consensus focus more on lower-cost particles.
+
+        polar_kernel_reg_loss_weight: Weight of the pairwise regularization
+            term. ``0`` removes kernel regularization;
+            larger values increase its influence.
 
     Returns:
-        Consensus array with shape ``(N, H, DoF)`` (or ``(N, ...)`` matching ``x`` tail).
-        Row ``j`` is particle ``j``'s consensus state.
+        Consensus array with shape ``(N, H, DoF)``
+            (or ``(N, ...)`` matching ``x`` tail).
+            Row ``j`` is particle ``j``'s consensus state.
     """
 
     loss_regularized = - polar_kernel_reg_loss_weight * neg_log_eval \
@@ -112,6 +124,8 @@ def compute_polar_consensus(
             debug.callback(_raise, None)
             return None
 
+        # If column differences are above tolerance, run `_bad` (print + raise);
+        # otherwise do nothing.
         return lax.cond(
             max_diff > 1e-6,
             _bad,
@@ -119,6 +133,8 @@ def compute_polar_consensus(
             operand=None,
         )
 
+    # Only run the column-consistency check when regularization weight is zero.
+    # With non-zero regularization, different columns are expected.
     _ = lax.cond(
         polar_kernel_reg_loss_weight == 0,
         _check_columns,
@@ -158,19 +174,25 @@ def compute_polar_consensus(
             used in condition
             """
             debug.print(
-                "polar kernel reg weight is 0 but consensus rows differ (max diff: {})",
+                "polar kernel reg weight is 0 but consensus rows \
+                differ (max diff: {})",
                 max_diff,
             )
             debug.callback(_raise, None)
             return None
 
+        # If consensus rows differ beyond tolerance,
+        # run `_bad` (print + raise);
+        # otherwise do nothing.
         return lax.cond(
             max_diff > 1e-6,
-            _bad,
-            lambda _: None,
+            _bad,  # if max_diff > 1e-6
+            lambda _: None, # otherwise
             operand=None,
         )
 
+    # Only enforce identical consensus rows when regularization weight is zero.
+    # For non-zero regularization, per-particle consensus is allowed to differ.
     _ = lax.cond(
         polar_kernel_reg_loss_weight == 0,
         _check_consensus_rows,
