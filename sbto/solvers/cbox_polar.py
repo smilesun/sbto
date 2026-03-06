@@ -1,3 +1,4 @@
+
 import numpy as np
 import numpy.typing as npt
 from typing import Tuple
@@ -93,15 +94,16 @@ class CBO(SamplingBasedSolver):
         self.logs["s"] = drift_norm_nx1
 
         if self.cfg.noise_model == "isotropic":
-            noise *= drift_norm_nx1 # (D x D) vs (N x 1)
-
+            noise = isotropic_noise = jnp.multiply(
+              drift_norm_nx1, noise) # drift_norm [Nx1] * noise [N x D]
+ 
         elif self.cfg.noise_model == "anistropic":
-            noise *= drift  # (D x D) vs (N x D)
+            noise = jnp.multiply(drift, noise) # drift [N x D] vs noise[N x D]
 
         else:
             raise ValueError(f"Invalid noise config ({self.cfg.noise_model}).")
 
-        self._x[:, :self.n_dim] -= self._dt[:self.n_dim] * drift - noise
+        self._x[:, :self.n_dim] -= self._dt * drift - noise
 
         return self._x
 
