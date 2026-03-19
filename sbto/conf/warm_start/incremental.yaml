@@ -7,6 +7,6 @@ incremental: true
 # Max number of iterations per increment
 N_max_incr: 50
 # Minimum value of the diag covariance to increment the number of var to opt
-min_std_next: 5.5e-2
+min_std_next: 5.5e-10
 # Minimum value of the diag covariance when all knots are optimized
 min_std_final: 1.0e-2
