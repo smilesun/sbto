@@ -26,7 +26,7 @@ class ConfigCBO(ConfigSolver):
     lambda_: float = 1.0
     min_it_per_knot: int = 100
     load_initial_sampling_state: bool = True
-    initial_sampling_state_path: str = "/home/sunxd/sbto/datasets/G1RobotObjRef/2026_04_21__09_07_04/solver_state_final.npz"
+    ini_dist_path: str = ""
     _target_: str = "sbto.solvers.cbox.CBO"
 
 
@@ -68,9 +68,14 @@ class CBO(SamplingBasedSolver):
     def _maybe_load_initial_sampling_state(self) -> None:
         if self._initial_sampling_state_loaded or not self.cfg.load_initial_sampling_state:
             return
+        if not self.cfg.ini_dist_path:
+            raise ValueError(
+                "ini_dist_path must be set when "
+                "load_initial_sampling_state=True."
+            )
 
         self.state.mean, self.state.cov = load_mean_cov_from_solver_state(
-            self.cfg.initial_sampling_state_path
+            self.cfg.ini_dist_path
         )
         self._initial_sampling_state_loaded = True
 

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 import jax.numpy as jnp
 
 from sbto.solvers.solver_base import SamplingBasedSolver, SolverState, ConfigSolver
+from sbto.solvers.initial_sampling import load_mean_cov_from_solver_state
 from sbto.solvers.cbox_polar_per_particle_consensus_via_regularization \
     import compute_per_particle_target_consensus
 from sbto.solvers.cbox_kernel import gaussian_kernel_neg_log
@@ -31,6 +32,8 @@ class ConfigCBO(ConfigSolver):
     scalar_reg_loss_weight_neighborhood_kernel: float = 1.
     flag_auto_weight: bool = False
     min_it_per_knot: int = 100
+    load_initial_sampling_state: bool = True
+    ini_dist_path: str = ""
     _target_: str = "sbto.solvers.cbox_polar.CBO"
 
 
@@ -63,6 +66,7 @@ class CBO(SamplingBasedSolver):
         # allowing the warm-start stopping criterion to terminate the stage.
         self._min_it_per_knot = self.cfg.min_it_per_knot
         self._it_current_knot = 0
+        self._initial_sampling_state_loaded = False
 
     def opt_first_dim(self, n_dim: int = -1):
         super().opt_first_dim(n_dim)
@@ -91,12 +95,27 @@ class CBO(SamplingBasedSolver):
 
         return argmin, cmin
 
+    def _maybe_load_initial_sampling_state(self) -> None:
+        if self._initial_sampling_state_loaded or not self.cfg.load_initial_sampling_state:
+            return
+        if not self.cfg.ini_dist_path:
+            raise ValueError(
+                "ini_dist_path must be set when "
+                "load_initial_sampling_state=True."
+            )
+
+        self.state.mean, self.state.cov = load_mean_cov_from_solver_state(
+            self.cfg.ini_dist_path
+        )
+        self._initial_sampling_state_loaded = True
+
     def get_samples(self) -> Array:
         """
         Get samples from distribution parametrized
         by the current state.
         """
         if self.first_it:
+            self._maybe_load_initial_sampling_state()
             noise = self.sampler.sample(
                 mean=self._zeros,
                 cov=self._Id,
