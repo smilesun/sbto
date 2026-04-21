@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import jax.numpy as jnp
 
 from sbto.solvers.solver_base import SamplingBasedSolver, SolverState, ConfigSolver
+from sbto.solvers.initial_sampling import load_mean_cov_from_solver_state
 
 Array = npt.NDArray[np.float64]
 
@@ -24,6 +25,8 @@ class ConfigCBO(ConfigSolver):
     dt: float = 1.e-2
     lambda_: float = 1.0
     min_it_per_knot: int = 100
+    load_initial_sampling_state: bool = True
+    initial_sampling_state_path: str = "/home/sunxd/sbto/datasets/G1RobotObjRef/2026_04_21__09_07_04/solver_state_final.npz"
     _target_: str = "sbto.solvers.cbox.CBO"
 
 
@@ -43,6 +46,7 @@ class CBO(SamplingBasedSolver):
         self._dt = self.cfg.dt
         self._min_it_per_knot = self.cfg.min_it_per_knot
         self._it_current_knot = 0
+        self._initial_sampling_state_loaded = False
 
     def opt_first_dim(self, n_dim: int = -1):
         super().opt_first_dim(n_dim)
@@ -61,11 +65,21 @@ class CBO(SamplingBasedSolver):
         self._consensus[:, :self.n_dim] = w @ samples[:, :self.n_dim]
         return int(argmin), float(cmin)
 
+    def _maybe_load_initial_sampling_state(self) -> None:
+        if self._initial_sampling_state_loaded or not self.cfg.load_initial_sampling_state:
+            return
+
+        self.state.mean, self.state.cov = load_mean_cov_from_solver_state(
+            self.cfg.initial_sampling_state_path
+        )
+        self._initial_sampling_state_loaded = True
+
     def get_samples(self) -> Array:
         """
         Get samples from distribution parametrized by the current state.
         """
         if self.first_it:
+            self._maybe_load_initial_sampling_state()
             self._x[:] = self.sampler.sample(
                 mean=self.state.mean,
                 cov=self.state.cov,

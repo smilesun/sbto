@@ -9,6 +9,8 @@ cfg:
   dt: 0.01
   lambda_: 1.0
   min_it_per_knot: 100
+  load_initial_sampling_state: True
+  initial_sampling_state_path: /home/sunxd/sbto/datasets/G1RobotObjRef/2026_04_21__09_07_04/solver_state_final.npz
   sigma0: 0.25
   quasi_random: False
   seed: 0
