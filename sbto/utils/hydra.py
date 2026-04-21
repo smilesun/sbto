@@ -15,6 +15,7 @@ from sbto.solvers.solver_base import SamplingBasedSolver, SolverState
 from sbto.run.optimize import optimize_single_shooting, optimize_mutiple_shooting, optimize_incremental_opt
 from sbto.data.save import save_results
 from sbto.data.load import get_final_state_from_rundir
+from sbto.data.utils import create_dirs
 from sbto.run.stats import OptimizationStats
 
 def optimize_and_save_data(
@@ -32,6 +33,10 @@ def optimize_and_save_data(
         solver_state_0 = copy.deepcopy(solver_state_0)
     else:
         solver_state_0 = copy.deepcopy(solver.state)
+
+    exp_name = task.__class__.__name__ if not cfg.exp_name else cfg.exp_name
+    result_dir = create_dirs(exp_name, cfg.data_processing.data_dir, cfg.description)
+    print(f"Result directory: {result_dir}")
 
     # Multiple_shooting
     if cfg.warm_start.multiple_shooting:
@@ -83,6 +88,7 @@ def optimize_and_save_data(
         cfg.data_processing.n_last_it,
         cfg.data_processing.remove_keys,
         cfg.data_processing.diversity_plot_every,
+        result_dir,
     )
 
     opt_stats.save(rundir)

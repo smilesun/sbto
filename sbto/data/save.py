@@ -20,6 +20,10 @@ from sbto.evaluation.trajectory_diversity import (
     save_every_n_iteration_diversity_analysis,
     save_last_iteration_diversity_analysis,
 )
+from sbto.evaluation.trajectory_cluster_diversity import (
+    save_cluster_diversity_analysis,
+    save_every_n_iteration_cluster_diversity_analysis,
+)
 
 Array = npt.NDArray[np.float64]
 
@@ -126,9 +130,11 @@ def save_results(
     n_last_it: int = 0,
     remove_keys: List[str] = [],
     diversity_plot_every: int = 0,
+    result_dir: str = "",
     ) -> str:
-    exp_name = task.__class__.__name__ if not exp_name else exp_name
-    result_dir = create_dirs(exp_name, data_dir, description)
+    if not result_dir:
+        exp_name = task.__class__.__name__ if not exp_name else exp_name
+        result_dir = create_dirs(exp_name, data_dir, description)
 
     # Save config
     copy_hydra_config(hydra_rundir, result_dir)
@@ -271,8 +277,21 @@ def save_results(
                 all_samples[-1],
                 all_costs[-1],
             )
+            save_cluster_diversity_analysis(
+                result_dir,
+                all_samples[-1],
+                all_costs[-1],
+                sim,
+            )
             if diversity_plot_every > 0:
                 save_every_n_iteration_diversity_analysis(
+                    result_dir,
+                    sim,
+                    all_samples,
+                    all_costs,
+                    diversity_plot_every,
+                )
+                save_every_n_iteration_cluster_diversity_analysis(
                     result_dir,
                     sim,
                     all_samples,
