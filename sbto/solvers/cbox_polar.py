@@ -68,7 +68,7 @@ class CBO(SamplingBasedSolver):
             costs, samples, neighborhood_kernel_neg_log_eval,
             1.0 / self.cfg.beta,
             self.cfg.scalar_reg_loss_weight_neighborhood_kernel,
-            True)  # FIXME: put this into configuration
+            flag_auto_weight=True)  # FIXME: put this into configuration
 
         return argmin, cmin
 

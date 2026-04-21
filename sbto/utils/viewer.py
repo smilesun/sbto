@@ -1,14 +1,42 @@
+import os
 import time
+
+import cv2
 import mujoco
 import mujoco.viewer
 import numpy as np
 import numpy.typing as npt
-import mujoco
-import numpy as np
-import cv2
-import os
 
 Array = npt.NDArray[np.float64]
+
+
+def _create_video_writer(
+    save_path: str,
+    fps: int,
+    width: int,
+    height: int,
+) -> tuple[cv2.VideoWriter, str]:
+    ext = os.path.splitext(save_path)[1].lower()
+    codec_candidates = {
+        ".mp4": ["mp4v", "avc1"],
+        ".avi": ["XVID", "MJPG"],
+    }.get(ext, ["mp4v", "XVID", "MJPG", "avc1"])
+
+    for codec in codec_candidates:
+        writer = cv2.VideoWriter(
+            save_path,
+            cv2.VideoWriter_fourcc(*codec),
+            fps,
+            (width, height),
+        )
+        if writer.isOpened():
+            return writer, codec
+        writer.release()
+
+    raise RuntimeError(
+        f"Failed to open video writer for {save_path} with codecs {codec_candidates}. "
+        "OpenCV/FFmpeg could not initialize any available encoder."
+    )
 
 def visualize_trajectory(
     mj_model: mujoco.MjModel,
@@ -102,18 +130,15 @@ def render_and_save_trajectory(
     fps = min(fps, int(1/dt))
 
     # Check save path
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
     if os.path.isdir(save_path):
         filename = "trajectory_vis.mp4"
         save_path = os.path.join(save_path, filename)
+    save_dir = os.path.dirname(save_path)
+    if save_dir:
+        os.makedirs(save_dir, exist_ok=True)
 
     # Prepare video writer
-    writer = cv2.VideoWriter(
-        save_path,
-        cv2.VideoWriter_fourcc(*"avc1"),
-        fps,
-        (width, height),
-    )
+    writer, codec = _create_video_writer(save_path, fps, width, height)
 
     nq = mj_model.nq
     nv = mj_model.nv
@@ -139,7 +164,11 @@ def render_and_save_trajectory(
 
     writer.release()
     renderer.close()
-    print(f"Saved video to {save_path}")
+    if not os.path.isfile(save_path) or os.path.getsize(save_path) == 0:
+        raise RuntimeError(
+            f"Video writer closed without producing a file at {save_path}."
+        )
+    print(f"Saved video to {save_path} using codec {codec}")
 
 def visualize_trajectory_with_reference(
     mj_model: mujoco.MjModel,
