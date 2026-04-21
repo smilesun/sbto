@@ -40,7 +40,6 @@ class CBO(SamplingBasedSolver):
 
         self.first_it = True
         self._zeros = np.zeros(D)
-        self._Id = np.eye(D)
         self._x = np.zeros((cfg.N_samples, D))
         self._consensus = np.zeros((1, D))
         self._delta = self.cfg.delta
@@ -95,7 +94,7 @@ class CBO(SamplingBasedSolver):
 
         noise = np.sqrt(self._dt) * self._delta * self.sampler.sample(
             mean=self._zeros[:self.n_dim],
-            cov=self._Id[:self.n_dim, :self.n_dim],
+            cov=self.state.cov[:self.n_dim, :self.n_dim],
         )
 
         drift = self._x[:, :self.n_dim] - self._consensus[:, :self.n_dim]

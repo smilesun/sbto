@@ -119,36 +119,10 @@ class CBO(SamplingBasedSolver):
             self._maybe_load_initial_sampling_state()
             noise = self.sampler.sample(
                 mean=self._zeros,
-                cov=self._Id,
+                cov=self.state.cov,
             )
-            self._consensus[:] = self.state.mean
             self._x[:] = self.state.mean + self.cfg.delta * noise
             return self._x
-
-        # use n_dim to optimize only the first few dimensions
-
-        noise = np.sqrt(self._dt) * self._delta * self.sampler.sample(
-            mean=self._zeros[:self.n_dim],
-            cov=self._Id[:self.n_dim, :self.n_dim],
-        )
-
-        drift = self._x[:, :self.n_dim] - \
-            self._per_particle_consensus[:, :self.n_dim]
-
-        drift_norm_nx1 = np.linalg.norm(drift, axis=-1, keepdims=True)
-        self.logs["s"] = drift_norm_nx1
-
-        if self.cfg.noise_model == "isotropic":
-            noise = isotropic_noise = jnp.multiply(
-              drift_norm_nx1, noise) # drift_norm [Nx1] * noise [N x D]
-
-        elif self.cfg.noise_model == "anistropic":
-            noise = jnp.multiply(drift, noise) # drift [N x D] vs noise[N x D]
-
-        else:
-            raise ValueError(f"Invalid noise config ({self.cfg.noise_model}).")
-
-        self._x[:, :self.n_dim] -= self.cfg.lambda_ * self._dt * drift - noise
 
         return self._x
 
@@ -183,3 +157,28 @@ class CBO(SamplingBasedSolver):
         self._it_current_knot += 1
 
         self.first_it = False
+
+        # use n_dim to optimize only the first few dimensions
+
+        noise = np.sqrt(self._dt) * self._delta * self.sampler.sample(
+            mean=self._zeros[:self.n_dim],
+            cov=self._Id[:self.n_dim, :self.n_dim],
+        )
+
+        drift = self._x[:, :self.n_dim] - \
+            self._per_particle_consensus[:, :self.n_dim]
+
+        drift_norm_nx1 = np.linalg.norm(drift, axis=-1, keepdims=True)
+        self.logs["s"] = drift_norm_nx1
+
+        if self.cfg.noise_model == "isotropic":
+            noise = isotropic_noise = jnp.multiply(
+              drift_norm_nx1, noise) # drift_norm [Nx1] * noise [N x D]
+
+        elif self.cfg.noise_model == "anistropic":
+            noise = jnp.multiply(drift, noise) # drift [N x D] vs noise[N x D]
+
+        else:
+            raise ValueError(f"Invalid noise config ({self.cfg.noise_model}).")
+
+        self._x[:, :self.n_dim] -= self.cfg.lambda_ * self._dt * drift - noise
