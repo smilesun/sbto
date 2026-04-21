@@ -49,6 +49,22 @@ class CBO(SamplingBasedSolver):
         self._per_particle_consensus = np.zeros((cfg.N_samples, D))
         self._delta = self.cfg.delta
         self._dt = self.cfg.dt
+        # Warm-start uses increment_value() to decide whether to keep iterating
+        # at the current knot count. In CBO, the empirical particle covariance
+        # becomes tiny very quickly, so we track a separate search-scale
+        # covariance that decays more gradually.
+        self._increment_cov = np.eye(D) * self.cfg.sigma0**2
+        # Small smoothing factor so the stopping signal shrinks steadily rather
+        # than collapsing to the current empirical covariance in one update.
+        self._increment_cov_alpha = 0.1
+        # Minimum number of solver updates to keep for each knot stage before
+        # allowing the warm-start stopping criterion to terminate the stage.
+        self._min_it_per_knot = 100
+        self._it_current_knot = 0
+
+    def opt_first_dim(self, n_dim: int = -1):
+        super().opt_first_dim(n_dim)
+        self._it_current_knot = 0
 
     def update_mean(self, samples: Array, costs: Array) -> Tuple[int, float]:
         argmin = costs.argmin()
@@ -115,7 +131,21 @@ class CBO(SamplingBasedSolver):
         return self._x
 
     def update_distrib_param(self, state: SolverState, samples: Array) -> None:
-        state.mean, state.cov = self.sampler.estimate_params(samples)
+        mean, cov = self.sampler.estimate_params(samples)
+        state.mean, state.cov = mean, cov
+
+        s = slice(0, self.n_dim)
+        # Only update the currently optimized block so knot-increment logic
+        # follows the active dimensions selected by opt_first_dim().
+        self._increment_cov[s, s] += self._increment_cov_alpha * (
+            cov[s, s] - self._increment_cov[s, s]
+        )
+
+    def increment_value(self) -> float:
+        if self._it_current_knot < self._min_it_per_knot:
+            return np.inf
+        # Report the warm-start search scale instead of raw particle spread.
+        return np.max(np.diag(self._increment_cov[:self.n_dim, :self.n_dim]))
 
     def update(self,
                samples: Array,
@@ -128,5 +158,6 @@ class CBO(SamplingBasedSolver):
         best = samples[arg_min]
         self.update_min_cost_best(self.state, min_cost, best, best_id=int(arg_min))
         self.update_distrib_param(self.state, samples)
+        self._it_current_knot += 1
 
         self.first_it = False
