@@ -6,6 +6,8 @@ defaults:
 add_cov_diag: 0.03
 # Warm start with incremental optimization of the knots
 incremental: true
+# First number of knots to optimize
+start_knots: 2
 # Max number of iterations per increment
 N_max_incr: 50
 # Minimum value of the diag covariance to increment the number of var to opt

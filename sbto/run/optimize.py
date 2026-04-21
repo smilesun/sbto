@@ -132,6 +132,7 @@ def optimize_incremental_opt(
     N_max_it_per_knots: int = 50,
     min_std_next: float = 1.e-2,
     min_std_final: float = 1.e-3,
+    start_knots: int = 2,
     ) -> Tuple[SolverState, Array, Array]:
 
     all_costs = []
@@ -147,7 +148,8 @@ def optimize_incremental_opt(
     start = time.time()
 
     reset_best_knots_all = True
-    pbar_knots = trange(2, sim.Nknots+1, desc="Optimizing", leave=True)
+    start_knots = max(2, min(start_knots, sim.Nknots))
+    pbar_knots = trange(start_knots, sim.Nknots+1, desc="Optimizing", leave=True)
     pbar_postfix = {}
     pbar_it_postfix = {}
     nit_total = 0

@@ -29,6 +29,7 @@ class ConfigCBO(ConfigSolver):
     kappa: float = 1.
     scalar_reg_loss_weight_neighborhood_kernel: float = 1.
     flag_auto_weight: bool = False
+    min_it_per_knot: int = 100
     _target_: str = "sbto.solvers.cbox_polar.CBO"
 
 
@@ -59,7 +60,7 @@ class CBO(SamplingBasedSolver):
         self._increment_cov_alpha = 0.1
         # Minimum number of solver updates to keep for each knot stage before
         # allowing the warm-start stopping criterion to terminate the stage.
-        self._min_it_per_knot = 100
+        self._min_it_per_knot = self.cfg.min_it_per_knot
         self._it_current_knot = 0
 
     def opt_first_dim(self, n_dim: int = -1):

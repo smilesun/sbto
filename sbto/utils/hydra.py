@@ -46,6 +46,7 @@ def optimize_and_save_data(
             N_max_it_per_knots=cfg.warm_start.N_max_incr,
             min_std_next=cfg.warm_start.min_std_next,
             min_std_final=cfg.warm_start.min_std_final,
+            start_knots=cfg.warm_start.start_knots,
         )
 
     # Single shooting
