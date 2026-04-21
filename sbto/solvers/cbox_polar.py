@@ -28,6 +28,7 @@ class ConfigCBO(ConfigSolver):
     dt: float = 1.e-2
     kappa: float = 1.
     scalar_reg_loss_weight_neighborhood_kernel: float = 1.
+    flag_auto_weight: bool = False
     _target_: str = "sbto.solvers.cbox_polar.CBO"
 
 
@@ -68,7 +69,7 @@ class CBO(SamplingBasedSolver):
             costs, samples, neighborhood_kernel_neg_log_eval,
             1.0 / self.cfg.beta,
             self.cfg.scalar_reg_loss_weight_neighborhood_kernel,
-            flag_auto_weight=True)  # FIXME: put this into configuration
+            flag_auto_weight=self.cfg.flag_auto_weight)
 
         return argmin, cmin
 

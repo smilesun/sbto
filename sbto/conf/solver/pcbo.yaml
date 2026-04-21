@@ -9,6 +9,7 @@ cfg:
   dt: 0.01
   kappa: 1.0
   scalar_reg_loss_weight_neighborhood_kernel: 1.0
+  flag_auto_weight: false
   sigma0: 0.25
   quasi_random: False
   seed: 0
