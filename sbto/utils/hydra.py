@@ -82,6 +82,7 @@ def optimize_and_save_data(
         cfg.data_processing.save_top,
         cfg.data_processing.n_last_it,
         cfg.data_processing.remove_keys,
+        cfg.data_processing.diversity_plot_every,
     )
 
     opt_stats.save(rundir)

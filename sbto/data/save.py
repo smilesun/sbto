@@ -16,7 +16,10 @@ from sbto.data.utils import solver_state_path_from_rundir, create_dirs
 from sbto.data.postprocess import split_x_traj
 from sbto.data.aggregate import get_top_samples
 from sbto.data.constants import *
-from sbto.evaluation.trajectory_diversity import save_last_iteration_diversity_analysis
+from sbto.evaluation.trajectory_diversity import (
+    save_every_n_iteration_diversity_analysis,
+    save_last_iteration_diversity_analysis,
+)
 
 Array = npt.NDArray[np.float64]
 
@@ -122,6 +125,7 @@ def save_results(
     save_top: float = 0.,
     n_last_it: int = 0,
     remove_keys: List[str] = [],
+    diversity_plot_every: int = 0,
     ) -> str:
     exp_name = task.__class__.__name__ if not exp_name else exp_name
     result_dir = create_dirs(exp_name, data_dir, description)
@@ -236,6 +240,15 @@ def save_results(
             **data_traj
         )
     
+    print(
+        "Diversity save debug:",
+        f"save_fig={save_fig},",
+        f"all_samples_shape={all_samples.shape},",
+        f"all_costs_shape={all_costs.shape},",
+        f"diversity_plot_every={diversity_plot_every},",
+        f"result_dir={result_dir}"
+    )
+
     # Save all figures
     if save_fig:
         best_knots = solver_state_final.best_all
@@ -258,6 +271,14 @@ def save_results(
                 all_samples[-1],
                 all_costs[-1],
             )
+            if diversity_plot_every > 0:
+                save_every_n_iteration_diversity_analysis(
+                    result_dir,
+                    sim,
+                    all_samples,
+                    all_costs,
+                    diversity_plot_every,
+                )
 
     # Save video rendering
     if save_video:

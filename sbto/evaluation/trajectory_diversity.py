@@ -28,7 +28,7 @@ def _greedy_mode_count(data: Array, threshold: float) -> int:
     return len(centers)
 
 
-def analyze_last_iteration_trajectories(
+def analyze_trajectories(
     samples: Array,
     costs: Array,
     sim,
@@ -80,40 +80,24 @@ def analyze_last_iteration_trajectories(
     return metrics, analysis_data
 
 
-def _save_metrics(dir_path: str, metrics: dict) -> None:
-    file_path = os.path.join(dir_path, f"{DIVERSITY_ANALYSIS_FILENAME}.yaml")
+def _save_metrics(file_path: str, metrics: dict) -> None:
     with open(file_path, "w") as f:
         yaml.safe_dump(metrics, f, sort_keys=False)
 
 
-def _plot_cost_distance(dir_path: str, costs: Array, dist_to_best: Array) -> None:
+def _plot_cost_distance(file_path: str, costs: Array, dist_to_best: Array, title: str) -> None:
     plt.close("all")
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.scatter(dist_to_best, costs, alpha=0.7)
     ax.set_xlabel("Distance To Best Control Trajectory")
     ax.set_ylabel("Cost")
-    ax.set_title("Last Iteration Cost vs Diversity")
+    ax.set_title(title)
     ax.grid(True, linestyle="--", alpha=0.5)
     fig.tight_layout()
-    fig.savefig(os.path.join(dir_path, "last_iteration_cost_vs_distance.pdf"), format="pdf")
+    fig.savefig(file_path, format="pdf")
 
 
-def _plot_iteration_cost_distance(dir_path: str, iteration: int, costs: Array, dist_to_best: Array) -> None:
-    plt.close("all")
-    fig, ax = plt.subplots(figsize=(8, 5))
-    ax.scatter(dist_to_best, costs, alpha=0.7)
-    ax.set_xlabel("Distance To Best Control Trajectory")
-    ax.set_ylabel("Cost")
-    ax.set_title(f"Iteration {iteration} Cost vs Diversity")
-    ax.grid(True, linestyle="--", alpha=0.5)
-    fig.tight_layout()
-    fig.savefig(
-        os.path.join(dir_path, f"iteration_{iteration:04d}_cost_vs_distance.pdf"),
-        format="pdf",
-    )
-
-
-def _plot_topk_controls(dir_path: str, time: Array, u_traj: Array, costs: Array, top_idx: Array) -> None:
+def _plot_topk_controls(file_path: str, time: Array, u_traj: Array, costs: Array, top_idx: Array, title: str) -> None:
     top_u = u_traj[top_idx]
     top_costs = costs[top_idx]
     nu = top_u.shape[-1]
@@ -132,12 +116,12 @@ def _plot_topk_controls(dir_path: str, time: Array, u_traj: Array, costs: Array,
 
     axs[0].legend(loc="upper right", fontsize=8)
     axs[-1].set_xlabel("Time step")
-    fig.suptitle("Top-K Control Trajectories From Last Iteration")
+    fig.suptitle(title)
     fig.tight_layout()
-    fig.savefig(os.path.join(dir_path, "last_iteration_topk_controls.pdf"), format="pdf")
+    fig.savefig(file_path, format="pdf")
 
 
-def _plot_topk_states(dir_path: str, time: Array, x_traj: Array, costs: Array, top_idx: Array, max_dims: int = 6) -> None:
+def _plot_topk_states(file_path: str, time: Array, x_traj: Array, costs: Array, top_idx: Array, title: str, max_dims: int = 6) -> None:
     top_x = x_traj[top_idx]
     top_costs = costs[top_idx]
     nx = top_x.shape[-1]
@@ -157,9 +141,52 @@ def _plot_topk_states(dir_path: str, time: Array, x_traj: Array, costs: Array, t
 
     axs[0].legend(loc="upper right", fontsize=8)
     axs[-1].set_xlabel("Time step")
-    fig.suptitle("Top-K State Trajectories From Last Iteration")
+    fig.suptitle(title)
     fig.tight_layout()
-    fig.savefig(os.path.join(dir_path, "last_iteration_topk_states.pdf"), format="pdf")
+    fig.savefig(file_path, format="pdf")
+
+
+def save_diversity_analysis(
+    dir_path: str,
+    prefix: str,
+    metrics: dict,
+    analysis_data: dict,
+) -> None:
+    metrics_path = os.path.join(dir_path, f"{prefix}.yaml")
+    cost_plot_path = os.path.join(dir_path, f"{prefix}_cost_vs_distance.pdf")
+    topk_controls_path = os.path.join(dir_path, f"{prefix}_topk_controls.pdf")
+    topk_states_path = os.path.join(dir_path, f"{prefix}_topk_states.pdf")
+
+    _save_metrics(metrics_path, metrics)
+    _plot_cost_distance(
+        cost_plot_path,
+        analysis_data["costs"],
+        analysis_data["dist_to_best"],
+        title=f"{prefix.replace('_', ' ').title()} Cost vs Diversity",
+    )
+    _plot_topk_controls(
+        topk_controls_path,
+        np.arange(analysis_data["u_traj"].shape[1]),
+        analysis_data["u_traj"],
+        analysis_data["costs"],
+        analysis_data["top_idx"],
+        title=f"{prefix.replace('_', ' ').title()} Top-K Control Trajectories",
+    )
+    _plot_topk_states(
+        topk_states_path,
+        np.arange(analysis_data["x_traj"].shape[1]),
+        analysis_data["x_traj"],
+        analysis_data["costs"],
+        analysis_data["top_idx"],
+        title=f"{prefix.replace('_', ' ').title()} Top-K State Trajectories",
+    )
+    print(
+        f"Saved diversity analysis '{prefix}' to {dir_path} "
+        f"({os.path.basename(metrics_path)}, "
+        f"{os.path.basename(cost_plot_path)}, "
+        f"{os.path.basename(topk_controls_path)}, "
+        f"{os.path.basename(topk_states_path)})"
+    )
 
 
 def save_last_iteration_diversity_analysis(
@@ -170,49 +197,46 @@ def save_last_iteration_diversity_analysis(
     *,
     top_k: int = 10,
 ) -> None:
-    metrics, analysis_data = analyze_last_iteration_trajectories(
+    metrics, analysis_data = analyze_trajectories(
         samples_last,
         costs_last,
         sim,
         top_k=top_k,
     )
-    _save_metrics(dir_path, metrics)
-    _plot_cost_distance(dir_path, analysis_data["costs"], analysis_data["dist_to_best"])
-    _plot_topk_controls(
-        dir_path,
-        np.arange(analysis_data["u_traj"].shape[1]),
-        analysis_data["u_traj"],
-        analysis_data["costs"],
-        analysis_data["top_idx"],
-    )
-    _plot_topk_states(
-        dir_path,
-        np.arange(analysis_data["x_traj"].shape[1]),
-        analysis_data["x_traj"],
-        analysis_data["costs"],
-        analysis_data["top_idx"],
-    )
+    save_diversity_analysis(dir_path, DIVERSITY_ANALYSIS_FILENAME, metrics, analysis_data)
 
 
-def save_iteration_diversity_plots(
+def save_every_n_iteration_diversity_analysis(
     dir_path: str,
     sim,
     all_samples: Array,
     all_costs: Array,
+    every_n: int,
+    *,
+    top_k: int = 10,
 ) -> None:
+    if every_n <= 0:
+        return
+
     iteration_dir = os.path.join(dir_path, "iteration_diversity")
     os.makedirs(iteration_dir, exist_ok=True)
+    print(
+        f"Saving diversity analysis every {every_n} iterations to "
+        f"{iteration_dir}"
+    )
 
     for iteration, (samples_it, costs_it) in enumerate(zip(all_samples, all_costs)):
-        _, analysis_data = analyze_last_iteration_trajectories(
+        if iteration % every_n != 0:
+            continue
+        metrics, analysis_data = analyze_trajectories(
             samples_it,
             costs_it,
             sim,
-            top_k=1,
+            top_k=top_k,
         )
-        _plot_iteration_cost_distance(
+        save_diversity_analysis(
             iteration_dir,
-            iteration,
-            analysis_data["costs"],
-            analysis_data["dist_to_best"],
+            f"iteration_{iteration:04d}",
+            metrics,
+            analysis_data,
         )

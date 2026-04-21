@@ -18,3 +18,5 @@ save_top: 1
 remove_keys: ["x", "obs"]
 # Take top trajectories from the <n_last_it> last iterations only
 n_last_it: 0
+# Save diversity plots every n iterations for all solvers; 0 means only the last iteration
+diversity_plot_every: 0
