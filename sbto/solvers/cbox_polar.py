@@ -33,6 +33,7 @@ class ConfigCBO(ConfigSolver):
     flag_auto_weight: bool = False
     min_it_per_knot: int = 100
     load_initial_sampling_state: bool = True
+    use_loaded_mean_only: bool = True
     ini_dist_path: str = ""
     _target_: str = "sbto.solvers.cbox_polar.CBO"
 
@@ -104,9 +105,9 @@ class CBO(SamplingBasedSolver):
                 "load_initial_sampling_state=True."
             )
 
-        self.state.mean, self.state.cov = load_mean_cov_from_solver_state(
-            self.cfg.ini_dist_path
-        )
+        mean, cov = load_mean_cov_from_solver_state(self.cfg.ini_dist_path)
+        self.state.mean = mean
+        self.state.cov = np.eye(self.D) if self.cfg.use_loaded_mean_only else cov
         self._initial_sampling_state_loaded = True
 
     def get_samples(self) -> Array:

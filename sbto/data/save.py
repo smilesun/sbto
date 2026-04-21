@@ -16,6 +16,7 @@ from sbto.data.utils import solver_state_path_from_rundir, create_dirs
 from sbto.data.postprocess import split_x_traj
 from sbto.data.aggregate import get_top_samples
 from sbto.data.constants import *
+from sbto.evaluation.trajectory_diversity import save_last_iteration_diversity_analysis
 
 Array = npt.NDArray[np.float64]
 
@@ -250,6 +251,13 @@ def save_results(
             solver_state_final.cov,
             all_costs,
         )
+        if all_samples.shape[0] > 0 and all_costs.shape[0] > 0:
+            save_last_iteration_diversity_analysis(
+                result_dir,
+                sim,
+                all_samples[-1],
+                all_costs[-1],
+            )
 
     # Save video rendering
     if save_video:
