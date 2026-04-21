@@ -26,6 +26,7 @@ class ConfigCBO(ConfigSolver):
     noise_model: str = "anistropic"
     delta: float = 1.e-2
     dt: float = 1.e-2
+    lambda_: float = 1.0
     kappa: float = 1.
     scalar_reg_loss_weight_neighborhood_kernel: float = 1.
     flag_auto_weight: bool = False
@@ -127,7 +128,7 @@ class CBO(SamplingBasedSolver):
         else:
             raise ValueError(f"Invalid noise config ({self.cfg.noise_model}).")
 
-        self._x[:, :self.n_dim] -= self._dt * drift - noise
+        self._x[:, :self.n_dim] -= self.cfg.lambda_ * self._dt * drift - noise
 
         return self._x
 

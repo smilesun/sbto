@@ -51,6 +51,10 @@ class CBO(SamplingBasedSolver):
     def update_mean(self, samples: Array, costs: Array) -> Tuple[int, float]:
         argmin = costs.argmin()
         cmin = costs[argmin]
+        # Shift costs by the minimum before exponentiation. This does not
+        # change the normalized weights, but keeps the best sample at exp(0)=1
+        # and all others at exp(negative), which is more numerically stable
+        # than exponentiating large-magnitude raw costs directly.
         exponents = -(costs - cmin) * self.cfg.beta
         w = np.exp(exponents)
         w /= w.sum()

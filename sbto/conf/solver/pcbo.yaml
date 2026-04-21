@@ -7,6 +7,7 @@ cfg:
   noise_model: anistropic
   delta: 0.01
   dt: 0.01
+  lambda_: 1.0
   kappa: 1.0
   scalar_reg_loss_weight_neighborhood_kernel: 1.0
   flag_auto_weight: false
