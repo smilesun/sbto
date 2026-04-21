@@ -98,6 +98,21 @@ def _plot_cost_distance(dir_path: str, costs: Array, dist_to_best: Array) -> Non
     fig.savefig(os.path.join(dir_path, "last_iteration_cost_vs_distance.pdf"), format="pdf")
 
 
+def _plot_iteration_cost_distance(dir_path: str, iteration: int, costs: Array, dist_to_best: Array) -> None:
+    plt.close("all")
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.scatter(dist_to_best, costs, alpha=0.7)
+    ax.set_xlabel("Distance To Best Control Trajectory")
+    ax.set_ylabel("Cost")
+    ax.set_title(f"Iteration {iteration} Cost vs Diversity")
+    ax.grid(True, linestyle="--", alpha=0.5)
+    fig.tight_layout()
+    fig.savefig(
+        os.path.join(dir_path, f"iteration_{iteration:04d}_cost_vs_distance.pdf"),
+        format="pdf",
+    )
+
+
 def _plot_topk_controls(dir_path: str, time: Array, u_traj: Array, costs: Array, top_idx: Array) -> None:
     top_u = u_traj[top_idx]
     top_costs = costs[top_idx]
@@ -177,3 +192,27 @@ def save_last_iteration_diversity_analysis(
         analysis_data["costs"],
         analysis_data["top_idx"],
     )
+
+
+def save_iteration_diversity_plots(
+    dir_path: str,
+    sim,
+    all_samples: Array,
+    all_costs: Array,
+) -> None:
+    iteration_dir = os.path.join(dir_path, "iteration_diversity")
+    os.makedirs(iteration_dir, exist_ok=True)
+
+    for iteration, (samples_it, costs_it) in enumerate(zip(all_samples, all_costs)):
+        _, analysis_data = analyze_last_iteration_trajectories(
+            samples_it,
+            costs_it,
+            sim,
+            top_k=1,
+        )
+        _plot_iteration_cost_distance(
+            iteration_dir,
+            iteration,
+            analysis_data["costs"],
+            analysis_data["dist_to_best"],
+        )
