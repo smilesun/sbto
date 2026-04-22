@@ -21,7 +21,11 @@ class ConfigCBO(ConfigSolver):
     noise_model: standard | coordinate
     delta: diffusion term
     dt: step size
-    kappa: neighborhood kernel
+    kappa: neighborhood kernel bandwidth (used when adaptive_kappa=False)
+    adaptive_kappa: set kappa each iteration from the actual inter-particle
+        distance distribution; fixes the common failure mode where kappa<<
+        typical particle distance causes the kernel to vanish identically
+    kappa_subsample: number of particles used to estimate adaptive kappa
     """
     beta: float = 1.e6
     noise_model: str = "anistropic"
@@ -29,12 +33,15 @@ class ConfigCBO(ConfigSolver):
     dt: float = 1.e-2
     lambda_: float = 1.0
     kappa: float = 1.
+    adaptive_kappa: bool = True
+    kappa_subsample: int = 128
     scalar_reg_loss_weight_neighborhood_kernel: float = 1.
     flag_auto_weight: bool = False
     min_it_per_knot: int = 100
     load_initial_sampling_state: bool = True
     use_loaded_mean_only: bool = True
     ini_dist_path: str = ""
+    mixed_init_frac: float = 0.5
     _target_: str = "sbto.solvers.cbox_polar.CBO"
 
 
@@ -73,26 +80,46 @@ class CBO(SamplingBasedSolver):
         super().opt_first_dim(n_dim)
         self._it_current_knot = 0
 
+    def _compute_adaptive_kappa(self, samples: Array) -> float:
+        """Median inter-particle distance estimated from a cheap subsample."""
+        N = samples.shape[0]
+        m = min(self.cfg.kappa_subsample, N)
+        rng = np.random.default_rng(self._it_current_knot)
+        idx = rng.choice(N, m, replace=False)
+        sub = samples[idx, :self.n_dim]
+        diff = sub[:, None, :] - sub[None, :, :]   # (m, m, n_dim)
+        dists = np.sqrt(np.sum(diff ** 2, axis=-1))  # (m, m)
+        upper = dists[np.triu_indices(m, k=1)]
+        kappa = float(np.median(upper)) if upper.size > 0 else float(self.cfg.kappa)
+        # Guard against degenerate collapsed particles.
+        return max(kappa, 1e-6)
+
     def update_mean(self, samples: Array, costs: Array) -> Tuple[int, float]:
         argmin = costs.argmin()
         cmin = costs[argmin]
         exponents = -(costs - cmin) * self.cfg.beta
         w = np.exp(exponents)
-        s = w.sum()
-        w /= s
+        w /= w.sum()
         self._consensus[:, :self.n_dim] = w @ samples[:, :self.n_dim]
 
+        kappa = self._compute_adaptive_kappa(samples) if self.cfg.adaptive_kappa \
+            else float(self.cfg.kappa)
+
+        # Restrict to active dimensions to avoid O(N² · D) intermediate array.
+        s_active = jnp.asarray(samples[:, :self.n_dim])
         neighborhood_kernel_neg_log_eval = gaussian_kernel_neg_log(
-            jnp.asarray(samples[:, None, :]),
-            jnp.asarray(samples[None, :, :]),
-            kappa=float(self.cfg.kappa),
+            s_active[:, None, :],
+            s_active[None, :, :],
+            kappa=kappa,
         )
 
-        self._per_particle_consensus = compute_per_particle_target_consensus(
-            costs, samples, neighborhood_kernel_neg_log_eval,
+        per_particle = compute_per_particle_target_consensus(
+            costs, s_active, neighborhood_kernel_neg_log_eval,
             1.0 / self.cfg.beta,
             self.cfg.scalar_reg_loss_weight_neighborhood_kernel,
-            flag_auto_weight=self.cfg.flag_auto_weight)
+            flag_auto_weight=self.cfg.flag_auto_weight,
+        )
+        self._per_particle_consensus[:, :self.n_dim] = np.asarray(per_particle)
 
         return argmin, cmin
 
@@ -112,16 +139,29 @@ class CBO(SamplingBasedSolver):
 
     def get_samples(self) -> Array:
         """
-        Get samples from distribution parametrized
-        by the current state.
+        Get samples from distribution parametrized by the current state.
+
+        On the first iteration, when load_initial_sampling_state=True, uses a
+        mixed initialisation: mixed_init_frac particles come from the loaded
+        distribution while the remainder are drawn from a broad sigma0-Gaussian
+        centred at zero.  This diversity in the initial swarm helps PCBO find
+        multiple trajectory modes.
         """
         if self.first_it:
             self._maybe_load_initial_sampling_state()
-            noise = self.sampler.sample(
-                mean=self._zeros,
-                cov=self.state.cov,
-            )
-            self._x[:] = self.state.mean + self.cfg.delta * noise
+
+            frac = self.cfg.mixed_init_frac if self.cfg.load_initial_sampling_state else 1.0
+            n_loaded = int(round(frac * self.cfg.N_samples))
+            n_random = self.cfg.N_samples - n_loaded
+
+            noise = self.sampler.sample(mean=self._zeros, cov=self.state.cov)
+            self._x[:n_loaded] = self.state.mean + self.cfg.delta * noise[:n_loaded]
+
+            if n_random > 0:
+                broad_cov = np.eye(self.D) * self.cfg.sigma0 ** 2
+                noise_broad = self.sampler.sample(mean=self._zeros, cov=broad_cov)
+                self._x[n_loaded:] = noise_broad[:n_random]
+
             return self._x
 
         return self._x

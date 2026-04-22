@@ -20,6 +20,7 @@ from sbto.evaluation.trajectory_diversity import (
     save_every_n_iteration_diversity_analysis,
     save_last_iteration_diversity_analysis,
 )
+from sbto.evaluation.fall_detection import check_trajectory_file
 from sbto.evaluation.trajectory_cluster_diversity import (
     save_cluster_diversity_analysis,
     save_every_n_iteration_cluster_diversity_analysis,
@@ -299,8 +300,13 @@ def save_results(
                     diversity_plot_every,
                 )
 
+    # Fall detection
+    fall_report = check_trajectory_file(file_path)
+    print(fall_report)
+
     # Save video rendering
     if save_video:
+        # Best trajectory
         render_and_save_trajectory(
             sim.mj_scene.mj_model,
             sim.mj_scene.mj_data,
@@ -308,5 +314,16 @@ def save_results(
             best_data[KEY_FULL_STATE],
             save_path=result_dir,
         )
+        # Top-k trajectories (when more than one was requested)
+        if N_top_samples > 1:
+            x_top = x_traj if x_traj.ndim == 3 else x_traj[None]  # (K, T, nx)
+            for rank in range(x_top.shape[0]):
+                render_and_save_trajectory(
+                    sim.mj_scene.mj_model,
+                    sim.mj_scene.mj_data,
+                    t,
+                    x_top[rank],
+                    save_path=os.path.join(result_dir, f"trajectory_vis_top_{rank}.mp4"),
+                )
 
     return result_dir

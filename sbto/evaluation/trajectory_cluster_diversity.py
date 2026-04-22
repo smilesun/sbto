@@ -4,16 +4,29 @@ import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
 
+from sbto.evaluation.csv_export import (
+    save_cluster_costs_csv,
+    save_cluster_representatives_csv,
+)
+
 Array = npt.NDArray[np.float64]
 
 
 def _pairwise_distances(data: Array) -> Array:
-    diff = data[:, None, :] - data[None, :, :]
-    return np.linalg.norm(diff, axis=-1)
+    # Avoid materialising an (N, N, D) intermediate; scipy computes row-wise in C.
+    from scipy.spatial.distance import cdist
+    return cdist(data, data)
 
 
-def _default_threshold(data: Array) -> float:
-    pairwise = _pairwise_distances(data)
+def _default_threshold(data: Array, max_subsample: int = 500) -> float:
+    # Subsample before pairwise computation when N is large.
+    n = data.shape[0]
+    if n > max_subsample:
+        idx = np.random.default_rng(0).choice(n, max_subsample, replace=False)
+        sub = data[idx]
+    else:
+        sub = data
+    pairwise = _pairwise_distances(sub)
     upper = pairwise[np.triu_indices(pairwise.shape[0], k=1)]
     if upper.size == 0:
         return 0.0
@@ -43,6 +56,17 @@ def _cluster_sorted_by_cost(data: Array, costs: Array, threshold: float) -> list
     return clusters
 
 
+def _pca_project(data: Array, n_components: int = 10) -> Array:
+    """Project data to its top PCA components to avoid concentration-of-measure."""
+    n_components = min(n_components, data.shape[0] - 1, data.shape[1])
+    if n_components <= 0:
+        return data
+    mean = data.mean(axis=0)
+    centered = data - mean
+    _, _, Vt = np.linalg.svd(centered, full_matrices=False)
+    return centered @ Vt[:n_components].T
+
+
 def analyze_cluster_diversity(
     samples: Array,
     costs: Array,
@@ -51,6 +75,7 @@ def analyze_cluster_diversity(
     cluster_on: str = "u_traj",
     cluster_threshold: float | None = None,
     max_samples: int = 100,
+    pca_components: int = 20,
 ) -> tuple[dict, dict]:
     n_keep = min(int(max_samples), costs.shape[0])
     top_idx = np.argsort(costs)[:n_keep]
@@ -68,8 +93,14 @@ def analyze_cluster_diversity(
     else:
         raise ValueError(f"Unsupported cluster_on value: {cluster_on}")
 
-    threshold = _default_threshold(cluster_data) if cluster_threshold is None else float(cluster_threshold)
-    clusters = _cluster_sorted_by_cost(cluster_data, costs, threshold)
+    # Project to low-D PCA space before clustering to avoid the concentration-
+    # of-measure problem: in high D all pairwise distances are nearly equal so
+    # the median threshold separates every point into its own cluster.
+    cluster_data_low = _pca_project(cluster_data, n_components=pca_components)
+
+    threshold = _default_threshold(cluster_data_low) if cluster_threshold is None \
+        else float(cluster_threshold)
+    clusters = _cluster_sorted_by_cost(cluster_data_low, costs, threshold)
 
     best_idx_per_cluster = np.array([cluster["indices"][0] for cluster in clusters], dtype=np.int32)
     best_costs_per_cluster = costs[best_idx_per_cluster]
@@ -117,6 +148,14 @@ def _plot_cluster_costs(file_path: str, best_costs: Array, cluster_sizes: Array)
     fig.savefig(file_path, format="pdf")
 
 
+def _most_discriminative_dims(traj: Array, best_idx_per_cluster: Array, max_dims: int) -> Array:
+    """Return indices of the joints with highest variance across cluster representatives."""
+    rep = traj[best_idx_per_cluster]          # (K, T, Nu)
+    per_dim_var = rep.var(axis=0).mean(axis=0)  # variance over clusters, averaged over time
+    n = min(max_dims, per_dim_var.shape[0])
+    return np.argsort(per_dim_var)[::-1][:n]
+
+
 def _plot_cluster_representatives(
     file_path: str,
     time: Array,
@@ -129,15 +168,17 @@ def _plot_cluster_representatives(
     max_dims: int = 6,
 ) -> None:
     rep_traj = traj[best_idx_per_cluster]
-    n_dim = min(rep_traj.shape[-1], max_dims)
+    # Pick the joints that differ most across cluster representatives.
+    dims = _most_discriminative_dims(traj, best_idx_per_cluster, max_dims)
+    n_dim = len(dims)
 
     plt.close("all")
     fig, axs = plt.subplots(n_dim, 1, figsize=(10, max(4, 2.5 * n_dim)), sharex=True)
     if n_dim == 1:
         axs = [axs]
 
-    for dim in range(n_dim):
-        ax = axs[dim]
+    for plot_i, dim in enumerate(dims):
+        ax = axs[plot_i]
         for i, (traj_i, cost_i, size_i) in enumerate(zip(rep_traj, best_costs_per_cluster, cluster_sizes), start=1):
             ax.plot(
                 time[:traj_i.shape[0]],
@@ -181,29 +222,17 @@ def save_cluster_diversity_analysis(
     x_plot_path = os.path.join(dir_path, f"{prefix}_states.pdf")
 
     _save_yaml(yaml_path, metrics)
-    _plot_cluster_costs(
-        cost_plot_path,
-        analysis_data["best_costs_per_cluster"],
-        analysis_data["cluster_sizes"],
-    )
-    _plot_cluster_representatives(
-        u_plot_path,
-        np.arange(analysis_data["u_traj"].shape[1]),
-        analysis_data["u_traj"],
-        analysis_data["best_idx_per_cluster"],
-        analysis_data["best_costs_per_cluster"],
-        analysis_data["cluster_sizes"],
-        prefix="u",
-    )
-    _plot_cluster_representatives(
-        x_plot_path,
-        np.arange(analysis_data["x_traj"].shape[1]),
-        analysis_data["x_traj"],
-        analysis_data["best_idx_per_cluster"],
-        analysis_data["best_costs_per_cluster"],
-        analysis_data["cluster_sizes"],
-        prefix="x",
-    )
+
+    _plot_cluster_costs(cost_plot_path, analysis_data["best_costs_per_cluster"], analysis_data["cluster_sizes"])
+    save_cluster_costs_csv(cost_plot_path, analysis_data["best_costs_per_cluster"], analysis_data["cluster_sizes"])
+
+    time = np.arange(analysis_data["u_traj"].shape[1])
+    _plot_cluster_representatives(u_plot_path, time, analysis_data["u_traj"], analysis_data["best_idx_per_cluster"], analysis_data["best_costs_per_cluster"], analysis_data["cluster_sizes"], prefix="u")
+    save_cluster_representatives_csv(u_plot_path, time, analysis_data["u_traj"], analysis_data["best_idx_per_cluster"], analysis_data["best_costs_per_cluster"], prefix="u")
+
+    time_x = np.arange(analysis_data["x_traj"].shape[1])
+    _plot_cluster_representatives(x_plot_path, time_x, analysis_data["x_traj"], analysis_data["best_idx_per_cluster"], analysis_data["best_costs_per_cluster"], analysis_data["cluster_sizes"], prefix="x")
+    save_cluster_representatives_csv(x_plot_path, time_x, analysis_data["x_traj"], analysis_data["best_idx_per_cluster"], analysis_data["best_costs_per_cluster"], prefix="x")
 
     print(
         f"Saved cluster diversity analysis to {dir_path} "

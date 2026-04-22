@@ -5,6 +5,11 @@ import numpy as np
 import numpy.typing as npt
 
 from sbto.evaluation.diversity import avg_joint_variance
+from sbto.evaluation.csv_export import (
+    save_cost_distance_csv,
+    save_topk_controls_csv,
+    save_topk_states_csv,
+)
 
 Array = npt.NDArray[np.float64]
 
@@ -158,28 +163,18 @@ def save_diversity_analysis(
     topk_states_path = os.path.join(dir_path, f"{prefix}_topk_states.pdf")
 
     _save_metrics(metrics_path, metrics)
-    _plot_cost_distance(
-        cost_plot_path,
-        analysis_data["costs"],
-        analysis_data["dist_to_best"],
-        title=f"{prefix.replace('_', ' ').title()} Cost vs Diversity",
-    )
-    _plot_topk_controls(
-        topk_controls_path,
-        np.arange(analysis_data["u_traj"].shape[1]),
-        analysis_data["u_traj"],
-        analysis_data["costs"],
-        analysis_data["top_idx"],
-        title=f"{prefix.replace('_', ' ').title()} Top-K Control Trajectories",
-    )
-    _plot_topk_states(
-        topk_states_path,
-        np.arange(analysis_data["x_traj"].shape[1]),
-        analysis_data["x_traj"],
-        analysis_data["costs"],
-        analysis_data["top_idx"],
-        title=f"{prefix.replace('_', ' ').title()} Top-K State Trajectories",
-    )
+
+    time_u = np.arange(analysis_data["u_traj"].shape[1])
+    time_x = np.arange(analysis_data["x_traj"].shape[1])
+
+    _plot_cost_distance(cost_plot_path, analysis_data["costs"], analysis_data["dist_to_best"], title=f"{prefix.replace('_', ' ').title()} Cost vs Diversity")
+    save_cost_distance_csv(cost_plot_path, analysis_data["costs"], analysis_data["dist_to_best"])
+
+    _plot_topk_controls(topk_controls_path, time_u, analysis_data["u_traj"], analysis_data["costs"], analysis_data["top_idx"], title=f"{prefix.replace('_', ' ').title()} Top-K Control Trajectories")
+    save_topk_controls_csv(topk_controls_path, time_u, analysis_data["u_traj"], analysis_data["costs"], analysis_data["top_idx"])
+
+    _plot_topk_states(topk_states_path, time_x, analysis_data["x_traj"], analysis_data["costs"], analysis_data["top_idx"], title=f"{prefix.replace('_', ' ').title()} Top-K State Trajectories")
+    save_topk_states_csv(topk_states_path, time_x, analysis_data["x_traj"], analysis_data["costs"], analysis_data["top_idx"])
     print(
         f"Saved diversity analysis '{prefix}' to {dir_path} "
         f"({os.path.basename(metrics_path)}, "
