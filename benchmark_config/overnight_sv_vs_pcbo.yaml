@@ -1,0 +1,230 @@
+# Overnight benchmark: PCBO beta (temperature) search + SV-CMA-ES parameter search
+#
+# PCBO beta (inverse temperature):
+#   - Large beta → sharp softmin → converges to 1 mode, loses diversity
+#   - Small beta → uniform weights → high cost, no convergence
+#   - Search brackets the known-good default of 1e10
+#
+# SV-CMA-ES: vary num_populations, kernel_std (SVGD repulsion bandwidth), alpha (repulsion strength)
+#
+# Launch:
+#   bash benchmark/launch_overnight_sv_vs_pcbo.sh
+#   bash benchmark/launch_overnight_sv_vs_pcbo.sh --resume
+#
+# Results: benchmark_rst_json_pointers/overnight_sv_vs_pcbo.json
+# Estimated runtime: ~11 hours (17 trials × ~35 min/trial + 5 min cooldown)
+
+n_samples: 2048
+cooldown_s: 300          # 5 min GPU cooldown between trials
+
+base:
+  # ── Incremental warm-start geometry ─────────────────────────────────────────
+  start_knots:          15
+  N_max_incr:           100
+
+  # ── Task ───────────────────────────────────────────────────────────────────
+  motion_path:          datasets/robot-object/sub10_largebox_000_original.npz
+
+  # ── Data processing / fall detection ────────────────────────────────────────
+  knot_cost_threshold:  1000
+  fall_floor_height:    0.40
+  fall_drop_threshold:  0.25
+
+  # ── PCBO-specific base settings ─────────────────────────────────────────────
+  min_it_per_knot:      10
+  load_initial_sampling_state: true
+  adaptive_kappa:       true
+  kappa_subsample:      128
+  mixed_init_frac:      0.5
+
+  # ── SV-CMA-ES warm-start: load CEM mean from this run directory ─────────────
+  # (PCBO warm-start uses ini_dist_path configured in sbto/conf/solver/pcbo.yaml)
+  warm_start_rundir:    outputs/G1RobotObjRef/2026_04_21__09_07_04
+  # save_samples_costs + n_last_it are set in launch_benchmark.py (true, 1 last iter ~54 MB/trial)
+
+trials:
+  # ────────────────────────────────────────────────────────────────────────────
+  # PCBO: beta (inverse temperature) search
+  # Best known params: scalar_reg=1e6, lambda=10, ini_cov_scale=10, no mean_only
+  # beta too small → uniform weights → high cost / no convergence
+  # beta too large → near-argmin → collapses to 1 mode
+  # ────────────────────────────────────────────────────────────────────────────
+
+  - label:               pcbo_beta1e2
+    solver:              pcbo
+    beta:                1.0e2
+    scalar_reg:          1.0e6
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  - label:               pcbo_beta1e3
+    solver:              pcbo
+    beta:                1.0e3
+    scalar_reg:          1.0e6
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  - label:               pcbo_beta1e4
+    solver:              pcbo
+    beta:                1.0e4
+    scalar_reg:          1.0e6
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  - label:               pcbo_beta1e5
+    solver:              pcbo
+    beta:                1.0e5
+    scalar_reg:          1.0e6
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  # Very soft: weights almost uniform, likely poor convergence
+  - label:               pcbo_beta1e6
+    solver:              pcbo
+    beta:                1.0e6
+    scalar_reg:          1.0e6
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  - label:               pcbo_beta1e7
+    solver:              pcbo
+    beta:                1.0e7
+    scalar_reg:          1.0e6
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  # Too soft: weights nearly uniform → cost rises, convergence weak
+  - label:               pcbo_beta1e8
+    solver:              pcbo
+    beta:                1.0e8
+    scalar_reg:          1.0e6
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  # One step below default: slightly softer softmin, more diverse
+  - label:               pcbo_beta1e9
+    solver:              pcbo
+    beta:                1.0e9
+    scalar_reg:          1.0e6
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  # Current default: known to give cost ~316 with good diversity
+  - label:               pcbo_beta1e10
+    solver:              pcbo
+    beta:                1.0e10
+    scalar_reg:          1.0e6
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  # One step above: sharper softmin → may collapse to fewer modes
+  - label:               pcbo_beta1e11
+    solver:              pcbo
+    beta:                1.0e11
+    scalar_reg:          1.0e6
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # SV-CMA-ES: num_populations search
+  # More populations → more diverse but each population gets fewer samples
+  # (N_samples=2048 must be divisible by num_populations)
+  # ────────────────────────────────────────────────────────────────────────────
+
+  - label:               sv_pops4
+    solver:              sv_cma_es
+    num_populations:     4         # 512 samples per pop
+    kernel_std:          1.0
+    alpha:               1.0
+    sigma0:              0.25
+    N_it:                100
+
+  - label:               sv_pops8
+    solver:              sv_cma_es
+    num_populations:     8         # 256 samples per pop — baseline
+    kernel_std:          1.0
+    alpha:               1.0
+    sigma0:              0.25
+    N_it:                100
+
+  - label:               sv_pops16
+    solver:              sv_cma_es
+    num_populations:     16        # 128 samples per pop — high diversity, thin pops
+    kernel_std:          1.0
+    alpha:               1.0
+    sigma0:              0.25
+    N_it:                100
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # SV-CMA-ES: kernel_std search (SVGD repulsion bandwidth)
+  # Small kernel_std → strong local repulsion (populations stay close)
+  # Large kernel_std → weak global repulsion (populations spread far)
+  # ────────────────────────────────────────────────────────────────────────────
+
+  - label:               sv_kstd025
+    solver:              sv_cma_es
+    num_populations:     8
+    kernel_std:          0.25      # tight kernel: strong short-range repulsion
+    alpha:               1.0
+    sigma0:              0.25
+    N_it:                100
+
+  - label:               sv_kstd4
+    solver:              sv_cma_es
+    num_populations:     8
+    kernel_std:          4.0       # loose kernel: weak long-range repulsion
+    alpha:               1.0
+    sigma0:              0.25
+    N_it:                100
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # SV-CMA-ES: alpha search (repulsion gradient strength)
+  # High alpha → populations pushed apart harder
+  # Low alpha → populations nearly independent CMA-ES instances
+  # ────────────────────────────────────────────────────────────────────────────
+
+  - label:               sv_alpha025
+    solver:              sv_cma_es
+    num_populations:     8
+    kernel_std:          1.0
+    alpha:               0.25      # weak repulsion: near-independent CMA-ES
+    sigma0:              0.25
+    N_it:                100
+
+  - label:               sv_alpha4
+    solver:              sv_cma_es
+    num_populations:     8
+    kernel_std:          1.0
+    alpha:               4.0       # strong repulsion: populations forced apart
+    sigma0:              0.25
+    N_it:                100

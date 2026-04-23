@@ -1,0 +1,13 @@
+_target_: sbto.solvers.sv_cma_es_solver.SVCMAESSolver
+cfg:
+  _target_: sbto.solvers.sv_cma_es_solver.ConfigSVCMAES
+  N_samples: 2048
+  N_it: 100
+  num_populations: 8
+  kernel_std: 1.0
+  alpha: 1.0
+  sigma0: 0.25
+  quasi_random: false
+  seed: 0
+  sampler: normal
+  population_init_path: ""

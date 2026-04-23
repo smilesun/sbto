@@ -13,3 +13,4 @@ cfg:
   quasi_random: False
   seed: 0
   sampler: normal
+  population_init_path: ""

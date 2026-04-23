@@ -88,6 +88,9 @@ def optimize_and_save_data(
         cfg.data_processing.n_last_it,
         cfg.data_processing.remove_keys,
         cfg.data_processing.diversity_plot_every,
+        cfg.data_processing.knot_cost_threshold,
+        cfg.data_processing.fall_floor_height,
+        cfg.data_processing.fall_drop_threshold,
         result_dir,
     )
 

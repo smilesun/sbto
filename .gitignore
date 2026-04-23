@@ -1,7 +1,10 @@
+voices
 test/
 plots/
 runs/
 datasets/
+benchmark_rst_json_pointers/ 
+benchmark_volatile_data/
 outputs/
 multirun/
 MUJOCO_LOG.TXT

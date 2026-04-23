@@ -40,6 +40,7 @@ class ConfigCBO(ConfigSolver):
     min_it_per_knot: int = 100
     load_initial_sampling_state: bool = True
     use_loaded_mean_only: bool = True
+    ini_cov_scale: float = 1.0
     ini_dist_path: str = ""
     mixed_init_frac: float = 0.5
     _target_: str = "sbto.solvers.cbox_polar.CBO"
@@ -134,7 +135,10 @@ class CBO(SamplingBasedSolver):
 
         mean, cov = load_mean_cov_from_solver_state(self.cfg.ini_dist_path)
         self.state.mean = mean
-        self.state.cov = np.eye(self.D) if self.cfg.use_loaded_mean_only else cov
+        if self.cfg.use_loaded_mean_only:
+            self.state.cov = np.eye(self.D) * self.cfg.ini_cov_scale
+        else:
+            self.state.cov = cov * self.cfg.ini_cov_scale
         self._initial_sampling_state_loaded = True
 
     def get_samples(self) -> Array:
@@ -148,6 +152,11 @@ class CBO(SamplingBasedSolver):
         multiple trajectory modes.
         """
         if self.first_it:
+            fixed = self._load_fixed_population()
+            if fixed is not None:
+                self._x[:] = fixed
+                return self._x
+
             self._maybe_load_initial_sampling_state()
 
             frac = self.cfg.mixed_init_frac if self.cfg.load_initial_sampling_state else 1.0

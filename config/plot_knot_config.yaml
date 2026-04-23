@@ -1,0 +1,6 @@
+# Configuration for plot_knot_distribution.py
+cost_threshold: 1000     # only plot trajectories with cost strictly below this value
+max_joints: 29           # number of joints to show (from joint 0)
+jitter_frac: 0.35        # horizontal jitter as fraction of min inter-knot gap
+point_size: 8
+point_alpha: 0.5

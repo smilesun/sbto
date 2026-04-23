@@ -342,3 +342,112 @@ def plot_contact_plan(
 
     else:
         plt.show()
+
+
+def plot_knot_scatter(
+    samples: Array,
+    costs: Array,
+    t_knots: Array,
+    Nu: int,
+    save_dir: str = "",
+    cost_threshold: float = float("inf"),
+    fall_mask: Array | None = None,
+    jitter_frac: float = 0.35,
+    point_size: float = 8,
+    point_alpha: float = 0.5,
+) -> None:
+    """Jittered scatter of raw control knot values — no interpolation.
+
+    samples:   (M, D) raw knot vectors (D = Nknots * Nu)
+    costs:     (M,) per-sample costs; pass np.full(M, 0.0) if unavailable
+    t_knots:   (Nknots,) simulation timestep for each knot
+    fall_mask: (M,) boolean — True means the humanoid fell; those samples are excluded
+    """
+    import csv
+
+    cost_mask = costs < cost_threshold
+    fall_mask_used = fall_mask if fall_mask is not None else np.zeros(len(costs), dtype=bool)
+    mask = cost_mask & ~fall_mask_used
+    if mask.sum() == 0 and cost_mask.sum() > 0:
+        # Fall filter removed all remaining samples (likely false positives for this motion).
+        # Fall back to cost-only filtering so the plot is still generated.
+        print(
+            f"plot_knot_scatter: fall filter removed all {cost_mask.sum()} cost-passing samples "
+            f"(possible false positive for this task) — ignoring fall filter."
+        )
+        mask = cost_mask
+    samples = samples[mask]
+    costs = costs[mask]
+    if samples.shape[0] == 0:
+        print(f"plot_knot_scatter: no samples passed cost/fall filters, skipping.")
+        if save_dir:
+            txt_path = os.path.join(save_dir, "knot_distribution.txt")
+            threshold_str = f"{cost_threshold:.0f}" if cost_threshold < float("inf") else "inf"
+            with open(txt_path, "w") as _f:
+                _f.write(
+                    f"No samples had cost below {threshold_str}. "
+                    "Knot distribution does not make sense at this cost level.\n"
+                )
+            print(f"Saved: {txt_path}")
+        return
+
+    Nknots = samples.shape[1] // Nu
+    knots = samples.reshape(-1, Nknots, Nu)  # (M, Nknots, Nu)
+    M = knots.shape[0]
+
+    rng = np.random.default_rng(0)
+    gaps = np.diff(t_knots)
+    jitter_width = float(gaps.min()) * jitter_frac if gaps.size > 0 else 1.0
+
+    plt.close("all")
+    fig, axs = plt.subplots(Nu, 1, figsize=(12, max(4, 1.8 * Nu)), sharex=False)
+    if Nu == 1:
+        axs = [axs]
+
+    color = plt.rcParams["axes.prop_cycle"].by_key()["color"][0]
+
+    for joint in range(Nu):
+        ax = axs[joint]
+        for ki in range(Nknots):
+            jitter = rng.uniform(-jitter_width / 2, jitter_width / 2, size=M)
+            ax.scatter(
+                t_knots[ki] + jitter,
+                knots[:, ki, joint],
+                color=color,
+                s=point_size,
+                alpha=point_alpha,
+                linewidths=0,
+            )
+        ax.set_ylabel(f"joint {joint}", fontsize=7)
+        ax.grid(True, linestyle="--", alpha=0.4)
+        ax.tick_params(labelsize=7)
+
+    axs[-1].set_xlabel("Simulation timestep (knot)")
+    filters = []
+    if cost_threshold < float("inf"):
+        filters.append(f"cost < {cost_threshold}")
+    if fall_mask is not None:
+        filters.append("no fall")
+    filter_str = ", ".join(filters) if filters else "all samples"
+    fig.suptitle(
+        f"Control Knot Distribution ({M} samples, {filter_str})\njittered scatter — no interpolation"
+    )
+    fig.tight_layout()
+
+    if save_dir:
+        pdf_path = os.path.join(save_dir, "knot_distribution.pdf")
+        fig.savefig(pdf_path, format="pdf")
+        plt.close(fig)
+
+        csv_path = os.path.join(save_dir, "knot_distribution.csv")
+        with open(csv_path, "w", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["sample_rank", "knot_timestep", "joint", "value"])
+            for m in range(M):
+                for ki, t in enumerate(t_knots):
+                    for j in range(Nu):
+                        w.writerow([m, int(t), j, float(knots[m, ki, j])])
+        print(f"Saved: {pdf_path}")
+        print(f"Saved: {csv_path}")
+    else:
+        plt.show()

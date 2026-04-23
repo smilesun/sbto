@@ -1,5 +1,5 @@
 # Exp dir
-data_dir: "./datasets"
+data_dir: "./outputs"
 # Save figures
 save_fig: true
 # Save video
@@ -20,3 +20,10 @@ remove_keys: ["x", "obs"]
 n_last_it: 0
 # Save diversity plots every n iterations for all solvers; 0 means only the last iteration
 diversity_plot_every: 0
+# Only include trajectories with cost below this threshold in the knot distribution plot
+# (filters out fallen/degenerate solutions); set to .inf to disable
+knot_cost_threshold: 1000
+# Fall detection for knot distribution plot: root z below floor_height OR drop > drop_threshold → excluded
+# Set fall_floor_height to 0.0 to disable fall filtering
+fall_floor_height: 0.40
+fall_drop_threshold: 0.25

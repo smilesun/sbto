@@ -49,6 +49,13 @@ class CEM(SamplingBasedSolver):
         self.dim_to_sample = ~self.collapsed_dim
         self.dim_to_sample[self.n_dim:] = False
 
+        if self.first_it:
+            fixed = self._load_fixed_population()
+            if fixed is not None:
+                self.samples[:] = fixed
+                self.first_it = False
+                return self.samples
+
         N = 0 if self.first_it else self.N_keep
         self.samples[N:, self.dim_to_sample] = self.sampler.sample(
             mean=self.state.mean[self.dim_to_sample],

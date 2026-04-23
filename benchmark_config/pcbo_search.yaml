@@ -1,0 +1,100 @@
+# PCBO hyperparameter search — editable configuration
+# Edit the 'trials' list to add, remove, or change PCBO runs.
+# Then launch with:  bash benchmark/launch_pcbo_search.sh
+
+# ── Common settings (applied to every trial) ──────────────────────────────────
+n_samples: 2048          # particles per iteration
+cooldown_s: 120          # seconds to wait between trials (GPU cooldown)
+
+base:
+  min_it_per_knot:      10
+  load_initial_sampling_state: true   # load CEM warm-start mean/cov from ini_dist_path
+  adaptive_kappa:       true
+  kappa_subsample:      128
+  mixed_init_frac:      0.5
+  start_knots:          15            # warm-start: begin with this many knots
+  N_max_incr:           100           # max additional knots to grow to
+  motion_path:          datasets/robot-object/sub10_largebox_000_original.npz
+  knot_cost_threshold:  1000          # only show samples with cost < this in knot plot
+  fall_floor_height:    0.40          # fall detection: root z below this → fallen
+  fall_drop_threshold:  0.25          # fall detection: root z drops > this → fallen
+
+# ── Trials ────────────────────────────────────────────────────────────────────
+# Each trial produces one run.  Fields you can change per trial:
+#   label            — unique name (used in result dir and JSON)
+#   scalar_reg       — polarization strength  (key knob: try 1e5 / 1e6 / 1e7)
+#   lambda_          — CBO step size          (try 1.0 or 10.0)
+#   flag_auto_weight — auto-scale polarization weight (true / false)
+#   ini_cov_scale    — scale applied to loaded CEM covariance (1 = default, 10 = broader init)
+#   use_loaded_mean_only — true: use only CEM mean (fresh covariance); false: also load cov
+#   N_it             — number of CBO iterations per knot batch
+trials:
+  # ── Confirmed best from hpsearch (baseline, should give cost ~316) ──────────
+  - label:               best_hpsearch_ini10
+    scalar_reg:          1.0e6
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  - label:               best_hpsearch_ini100
+    scalar_reg:          1.0e6
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       100.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  # ── Mean-only warm start (fresh covariance, no CEM spread) ──────────────────
+  - label:               mean_only_ini1
+    scalar_reg:          1.0e6
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       1.0
+    use_loaded_mean_only: true
+    N_it:                100
+
+  # ── Vary scalar_reg ─────────────────────────────────────────────────────────
+  - label:               scalar1e5_ini10
+    scalar_reg:          1.0e5
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  - label:               scalar1e7_ini10
+    scalar_reg:          1.0e7
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  # ── Vary lambda ─────────────────────────────────────────────────────────────
+  - label:               lambda1_ini10
+    scalar_reg:          1.0e6
+    lambda_:             1.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  # ── More iterations ─────────────────────────────────────────────────────────
+  - label:               best_hpsearch_ini10_N200
+    scalar_reg:          1.0e6
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                200
+
+  # ── Auto-weight on ──────────────────────────────────────────────────────────
+  - label:               auto_w_ini10
+    scalar_reg:          1.0e6
+    lambda_:             10.0
+    flag_auto_weight:    true
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100

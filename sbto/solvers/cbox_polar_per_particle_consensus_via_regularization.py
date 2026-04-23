@@ -67,8 +67,8 @@ def compute_per_particle_target_consensus(
 
     scalar_reg_loss_weight_neighborhood_kernel = lax.cond(
         jnp.asarray(flag_auto_weight),
-        lambda _: 1.0 / ratio,
-        lambda _: jnp.asarray(scalar_reg_loss_weight_neighborhood_kernel),
+        lambda _: jnp.float32(1.0 / ratio),
+        lambda _: jnp.float32(scalar_reg_loss_weight_neighborhood_kernel),
         operand=None,
     )
 

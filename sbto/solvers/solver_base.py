@@ -37,6 +37,7 @@ class ConfigSolver():
     N_it: int = 100
     sigma0: float = 0.2
     sampler: str = "normal"
+    population_init_path: str = ""
 
 class SamplingBasedSolver(ABC):
     """
@@ -116,6 +117,14 @@ class SamplingBasedSolver(ABC):
         if min_cost_rollout < state.min_cost_all:
             state.best_all = best.copy()
             state.min_cost_all=float(min_cost_rollout)
+
+    def _load_fixed_population(self) -> Array | None:
+        """Return a saved population array if population_init_path is set, else None."""
+        path = getattr(self.cfg, "population_init_path", "")
+        if not path:
+            return None
+        data = np.load(path)
+        return np.asarray(data["population"], dtype=np.float64)
 
     def get_samples(self) -> Array:
         """

@@ -10,7 +10,7 @@ from sbto.tasks.task_mj import TaskMj
 from sbto.sim.sim_mj_rollout import SimMjRollout
 from sbto.tasks.task_base import OCPBase
 from sbto.solvers.solver_base import SolverState
-from sbto.utils.plotting import plot_contact_plan, plot_costs, plot_mean_cov, plot_state_control
+from sbto.utils.plotting import plot_contact_plan, plot_costs, plot_mean_cov, plot_state_control, plot_knot_scatter
 from sbto.utils.viewer import render_and_save_trajectory
 from sbto.data.utils import solver_state_path_from_rundir, create_dirs
 from sbto.data.postprocess import split_x_traj
@@ -20,7 +20,7 @@ from sbto.evaluation.trajectory_diversity import (
     save_every_n_iteration_diversity_analysis,
     save_last_iteration_diversity_analysis,
 )
-from sbto.evaluation.fall_detection import check_trajectory_file
+from sbto.evaluation.fall_detection import check_trajectory_file, detect_fall
 from sbto.evaluation.trajectory_cluster_diversity import (
     save_cluster_diversity_analysis,
     save_every_n_iteration_cluster_diversity_analysis,
@@ -131,6 +131,9 @@ def save_results(
     n_last_it: int = 0,
     remove_keys: List[str] = [],
     diversity_plot_every: int = 0,
+    knot_cost_threshold: float = float("inf"),
+    fall_floor_height: float = 0.0,
+    fall_drop_threshold: float = 0.25,
     result_dir: str = "",
     ) -> str:
     if not result_dir:
@@ -219,7 +222,8 @@ def save_results(
         })
 
     # Save best
-    file_path = os.path.join(result_dir, f"{BEST_TRAJECTORY_FILENAME}.npz")
+    best_trajectory_path = os.path.join(result_dir, f"{BEST_TRAJECTORY_FILENAME}.npz")
+    file_path = best_trajectory_path
     if N_top_samples == 1:
         best_data = data_traj.copy()
     else:
@@ -272,6 +276,26 @@ def save_results(
             all_costs,
         )
         if all_samples.shape[0] > 0 and all_costs.shape[0] > 0:
+            fall_mask = None
+            if fall_floor_height > 0.0:
+                _, x_traj_all, _, _ = sim.rollout(all_samples[-1], with_x0=True)
+                root_pos_all = split_x_traj(x_traj_all, sim.mj_scene).get(KEY_ROOT_POS)
+                if root_pos_all is not None:
+                    dummy_time = np.arange(root_pos_all.shape[1], dtype=float)
+                    fall_mask = np.array([
+                        detect_fall(root_pos_all[i], dummy_time,
+                                    fall_floor_height, fall_drop_threshold).fallen
+                        for i in range(root_pos_all.shape[0])
+                    ])
+            plot_knot_scatter(
+                all_samples[-1],
+                all_costs[-1],
+                sim.t_knots,
+                sim.mj_scene.Nu,
+                save_dir=result_dir,
+                cost_threshold=knot_cost_threshold,
+                fall_mask=fall_mask,
+            )
             save_last_iteration_diversity_analysis(
                 result_dir,
                 sim,
@@ -300,8 +324,8 @@ def save_results(
                     diversity_plot_every,
                 )
 
-    # Fall detection
-    fall_report = check_trajectory_file(file_path)
+    # Fall detection (always run on the single best trajectory)
+    fall_report = check_trajectory_file(best_trajectory_path)
     print(fall_report)
 
     # Save video rendering
@@ -317,11 +341,12 @@ def save_results(
         # Top-k trajectories (when more than one was requested)
         if N_top_samples > 1:
             x_top = x_traj if x_traj.ndim == 3 else x_traj[None]  # (K, T, nx)
+            t_single = best_data[KEY_TIME]  # (T,) — all trajectories share the same time axis
             for rank in range(x_top.shape[0]):
                 render_and_save_trajectory(
                     sim.mj_scene.mj_model,
                     sim.mj_scene.mj_data,
-                    t,
+                    t_single,
                     x_top[rank],
                     save_path=os.path.join(result_dir, f"trajectory_vis_top_{rank}.mp4"),
                 )
