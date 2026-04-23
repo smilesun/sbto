@@ -1,18 +1,21 @@
-# Overnight benchmark: PCBO beta (temperature) search + SV-CMA-ES parameter search
+# Overnight benchmark: full 2D HP search for PCBO + SV-CMA-ES
 #
-# PCBO beta (inverse temperature):
-#   - Large beta → sharp softmin → converges to 1 mode, loses diversity
-#   - Small beta → uniform weights → high cost, no convergence
-#   - Search brackets the known-good default of 1e10
+# PCBO (flag_auto_weight=false throughout):
+#   Axis 1 — beta sweep, scalar_reg=1e6 fixed:
+#     1e2 → 1e11  (10 trials)
+#   Axis 2 — scalar_reg sweep, beta=1e10 fixed:
+#     1e5, 1e7, 1e9, 1e10, 1e11  (5 trials; 1e4/1e6/1e8 already tested in hpsearch)
+#   2D grid at low beta (1e2–1e5) × large scalar_reg (1e8, 1e10):
+#     8 trials — explore interaction between low temperature and high polarization
 #
-# SV-CMA-ES: vary num_populations, kernel_std (SVGD repulsion bandwidth), alpha (repulsion strength)
+# SV-CMA-ES: num_populations, kernel_std, alpha  (7 trials)
 #
 # Launch:
-#   bash benchmark/launch_overnight_sv_vs_pcbo.sh
-#   bash benchmark/launch_overnight_sv_vs_pcbo.sh --resume
+#   bash benchmark/launch.sh benchmark_config/overnight_sv_vs_pcbo.yaml
+#   bash benchmark/launch.sh benchmark_config/overnight_sv_vs_pcbo.yaml --resume
 #
 # Results: benchmark_rst_json_pointers/overnight_sv_vs_pcbo.json
-# Estimated runtime: ~11 hours (17 trials × ~35 min/trial + 5 min cooldown)
+# Estimated runtime: ~18 hours (30 trials × ~35 min/trial + 5 min cooldown)
 
 n_samples: 2048
 cooldown_s: 300          # 5 min GPU cooldown between trials
@@ -149,6 +152,147 @@ trials:
     solver:              pcbo
     beta:                1.0e11
     scalar_reg:          1.0e6
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # PCBO: scalar_reg search (flag_auto_weight=false, beta=1e10 fixed)
+  # Already tested in hpsearch: 1e4, 1e6, 1e8  → extending gaps + super-large
+  # ────────────────────────────────────────────────────────────────────────────
+
+  - label:               pcbo_sreg1e5
+    solver:              pcbo
+    beta:                1.0e10
+    scalar_reg:          1.0e5
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  - label:               pcbo_sreg1e7
+    solver:              pcbo
+    beta:                1.0e10
+    scalar_reg:          1.0e7
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  - label:               pcbo_sreg1e9
+    solver:              pcbo
+    beta:                1.0e10
+    scalar_reg:          1.0e9
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  - label:               pcbo_sreg1e10
+    solver:              pcbo
+    beta:                1.0e10
+    scalar_reg:          1.0e10
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  - label:               pcbo_sreg1e11
+    solver:              pcbo
+    beta:                1.0e10
+    scalar_reg:          1.0e11
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # PCBO: 2D grid — low beta × large scalar_reg
+  # scalar_reg=1e6 at these betas already covered by the beta sweep above.
+  # Exploring whether high polarization helps or hurts at low temperatures.
+  # ────────────────────────────────────────────────────────────────────────────
+
+  - label:               pcbo_b1e2_sr1e8
+    solver:              pcbo
+    beta:                1.0e2
+    scalar_reg:          1.0e8
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  - label:               pcbo_b1e2_sr1e10
+    solver:              pcbo
+    beta:                1.0e2
+    scalar_reg:          1.0e10
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  - label:               pcbo_b1e3_sr1e8
+    solver:              pcbo
+    beta:                1.0e3
+    scalar_reg:          1.0e8
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  - label:               pcbo_b1e3_sr1e10
+    solver:              pcbo
+    beta:                1.0e3
+    scalar_reg:          1.0e10
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  - label:               pcbo_b1e4_sr1e8
+    solver:              pcbo
+    beta:                1.0e4
+    scalar_reg:          1.0e8
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  - label:               pcbo_b1e4_sr1e10
+    solver:              pcbo
+    beta:                1.0e4
+    scalar_reg:          1.0e10
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  - label:               pcbo_b1e5_sr1e8
+    solver:              pcbo
+    beta:                1.0e5
+    scalar_reg:          1.0e8
+    lambda_:             10.0
+    flag_auto_weight:    false
+    ini_cov_scale:       10.0
+    use_loaded_mean_only: false
+    N_it:                100
+
+  - label:               pcbo_b1e5_sr1e10
+    solver:              pcbo
+    beta:                1.0e5
+    scalar_reg:          1.0e10
     lambda_:             10.0
     flag_auto_weight:    false
     ini_cov_scale:       10.0

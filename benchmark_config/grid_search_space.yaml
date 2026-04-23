@@ -1,0 +1,55 @@
+# Hyperparameter search space definition.
+# Edit the `search` section to control what gets swept.
+# Single-element lists = fixed. Multi-element lists = Cartesian product.
+#
+# Generate the trial config:
+#   uv run python benchmark/generate_config.py benchmark_config/grid_search_space.yaml
+#   uv run python benchmark/generate_config.py benchmark_config/grid_search_space.yaml --dry-run
+#
+# Then launch:
+#   bash benchmark/launch.sh benchmark_config/grid_generated.yaml
+#   bash benchmark/launch.sh benchmark_config/grid_generated.yaml --resume
+#
+# The generated file (grid_generated.yaml) is overwritten each time you run
+# the generator. It is completely separate from the overnight benchmark.
+
+output: benchmark_config/grid_generated.yaml
+
+n_samples: 2048
+cooldown_s: 300
+
+base:
+  start_knots:          15
+  N_max_incr:           100
+  motion_path:          datasets/robot-object/sub10_largebox_000_original.npz
+  knot_cost_threshold:  1000
+  fall_floor_height:    0.40
+  fall_drop_threshold:  0.25
+  min_it_per_knot:      10
+  load_initial_sampling_state: true
+  adaptive_kappa:       true
+  kappa_subsample:      128
+  mixed_init_frac:      0.5
+  warm_start_rundir:    outputs/G1RobotObjRef/2026_04_21__09_07_04
+
+search:
+  # ── PCBO ──────────────────────────────────────────────────────────────────
+  # Multi-element lists → swept. Single-element → fixed.
+  # beta × scalar_reg grid: 5 × 3 = 15 trials
+  pcbo:
+    beta:                [1.0e2, 1.0e4, 1.0e6, 1.0e8, 1.0e10]
+    scalar_reg:          [1.0e6, 1.0e8, 1.0e10]
+    lambda_:             [10.0]
+    flag_auto_weight:    [false]
+    ini_cov_scale:       [10.0]
+    use_loaded_mean_only: [false]
+    N_it:                [100]
+
+  # ── SV-CMA-ES ─────────────────────────────────────────────────────────────
+  # num_populations × kernel_std × alpha: 3 × 3 × 3 = 27 trials
+  sv_cma_es:
+    num_populations:     [4, 8, 16]
+    kernel_std:          [0.25, 1.0, 4.0]
+    alpha:               [0.25, 1.0, 4.0]
+    sigma0:              [0.25]
+    N_it:                [100]
