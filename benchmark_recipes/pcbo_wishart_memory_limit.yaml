@@ -1,0 +1,97 @@
+# AUTO-GENERATED — do not edit by hand.
+# Source: /home/sunxd/sbto/benchmark_hp_space/pcbo_wishart_memory_search_space.yaml
+# Trials: 5  (~3.3 h)
+# Launch: bash benchmark/launch.sh benchmark_recipes/pcbo_wishart_memory_limit.yaml
+
+n_samples: 2048
+cooldown_s: 120
+base:
+  start_knots: 15
+  N_max_incr: 100
+  motion_path: datasets/robot-object/sub10_largebox_000_original.npz
+  knot_cost_threshold: 1000
+  fall_floor_height: 4.000000e-01
+  fall_drop_threshold: 2.500000e-01
+  min_it_per_knot: 10
+  load_initial_sampling_state: false
+  adaptive_kappa: true
+  kappa_subsample: 128
+  mixed_init_frac: 5.000000e-01
+  warm_start_rundir: outputs/G1RobotObjRef2Delete/2026_04_21__09_07_04
+  save_video: true
+  save_top: 5
+  save_fig: true
+  save_samples_costs: false
+  n_last_it: 1
+policies: {}
+trials:
+- solver: pcbo
+  label: pcbo_n_s4096
+  n_samples: 4096
+  beta: 1.000000e+10
+  scalar_reg: 1.000000e+06
+  lambda_: 10
+  flag_auto_weight: false
+  ini_cov_scale: 10
+  use_loaded_mean_only: false
+  N_it: 100
+  population_init: wishart
+  wishart_n_components: 4
+  wishart_cov_scale: 16
+  wishart_seed: 0
+- solver: pcbo
+  label: pcbo_n_s8192
+  n_samples: 8192
+  beta: 1.000000e+10
+  scalar_reg: 1.000000e+06
+  lambda_: 10
+  flag_auto_weight: false
+  ini_cov_scale: 10
+  use_loaded_mean_only: false
+  N_it: 100
+  population_init: wishart
+  wishart_n_components: 4
+  wishart_cov_scale: 16
+  wishart_seed: 0
+- solver: pcbo
+  label: pcbo_n_s16384
+  n_samples: 16384
+  beta: 1.000000e+10
+  scalar_reg: 1.000000e+06
+  lambda_: 10
+  flag_auto_weight: false
+  ini_cov_scale: 10
+  use_loaded_mean_only: false
+  N_it: 100
+  population_init: wishart
+  wishart_n_components: 4
+  wishart_cov_scale: 16
+  wishart_seed: 0
+- solver: pcbo
+  label: pcbo_n_s32768
+  n_samples: 32768
+  beta: 1.000000e+10
+  scalar_reg: 1.000000e+06
+  lambda_: 10
+  flag_auto_weight: false
+  ini_cov_scale: 10
+  use_loaded_mean_only: false
+  N_it: 100
+  population_init: wishart
+  wishart_n_components: 4
+  wishart_cov_scale: 16
+  wishart_seed: 0
+- solver: pcbo
+  label: pcbo_n_s65536
+  n_samples: 65536
+  beta: 1.000000e+10
+  scalar_reg: 1.000000e+06
+  lambda_: 10
+  flag_auto_weight: false
+  ini_cov_scale: 10
+  use_loaded_mean_only: false
+  N_it: 100
+  population_init: wishart
+  wishart_n_components: 4
+  wishart_cov_scale: 16
+  wishart_seed: 0

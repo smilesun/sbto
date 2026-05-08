@@ -74,13 +74,13 @@ The warm-start state is `solver_state_final.npz` inside that directory.
 
 > CEM typically runs 15–45 minutes on a single GPU.  
 > A known-good state is already committed at  
-> `outputs/G1RobotObjRef/2026_04_21__09_07_04/solver_state_final.npz`.
+> `outputs/G1RobotObjRef2Delete/2026_04_21__09_07_04/solver_state_final.npz`.
 
 ---
 
 ## 5. Step 2 — Edit the PCBO trial configuration
 
-Open `benchmark_config/pcbo_search.yaml`.
+Open `benchmark_recipes/pcbo_search.yaml`.
 
 **Common settings** (top of file, apply to all trials):
 
@@ -136,14 +136,14 @@ bash benchmark/launch_pcbo_search.sh --resume
 ### Foreground (output to terminal)
 
 ```bash
-uv run python benchmark/launch_benchmark.py benchmark_config/pcbo_search.yaml
-uv run python benchmark/launch_benchmark.py benchmark_config/pcbo_search.yaml --resume
+uv run python benchmark/launch_benchmark.py benchmark_recipes/pcbo_search.yaml
+uv run python benchmark/launch_benchmark.py benchmark_recipes/pcbo_search.yaml --resume
 ```
 
 Dry-run (prints commands without executing):
 
 ```bash
-uv run python benchmark/launch_benchmark.py benchmark_config/pcbo_search.yaml --dry-run
+uv run python benchmark/launch_benchmark.py benchmark_recipes/pcbo_search.yaml --dry-run
 ```
 
 ---
@@ -240,12 +240,14 @@ These ran once and results are on disk in `benchmark_rst_json_pointers/`:
 
 | Script | What it tested |
 |--------|----------------|
-| `benchmark/hpsearch_pcbo.py` | PCBO hyperparameter grid (11 trials) |
+| `benchmark_recipes/hpsearch_pcbo.yaml` | PCBO hyperparameter grid (11 trials) |
 | `benchmark/benchmark_sv_vs_pcbo.py` | SV-CMA-ES vs PCBO with CEM warm-start |
 | `benchmark/benchmark_wishart_init.py` | PCBO with zero-mean Wishart init (no warm-start) |
-| `benchmark/benchmark_wishart_cem.py` | CEM with zero-mean Wishart init (no warm-start) |
+| `benchmark_recipes/benchmark_wishart_cem.yaml` | CEM with zero-mean Wishart init (no warm-start) |
+| `benchmark_recipes/compare_cem_pcbo.yaml` | CEM vs PCBO from the same saved initial population |
 
-Re-run any of them: `uv run python benchmark/<script>.py --resume`
+Re-run any config-backed benchmark:
+`uv run python benchmark/launch_benchmark.py benchmark_recipes/<config>.yaml --resume`
 
 ---
 
@@ -259,8 +261,9 @@ sbto/
 │   ├── status.sh               # Print progress table for all benchmarks
 │   ├── kill_all.sh             # Stop all running benchmark processes
 │   └── README.md               # Benchmark-specific quick-start guide
-├── benchmark_config/           # Editable trial configurations
-│   └── pcbo_search.yaml        # PCBO hyperparameter search config
+├── benchmark_common_config/    # Shared policies applied across benchmarks
+├── benchmark_recipes/          # Runnable sequential benchmark recipes
+│   └── pcbo_search.yaml        # PCBO hyperparameter search recipe
 ├── benchmark_logs/             # Log files from background benchmark runs
 ├── benchmark_rst_json_pointers/ # JSON result files (one per benchmark)
 ├── benchmark_volatile_data/    # Wishart population cache files

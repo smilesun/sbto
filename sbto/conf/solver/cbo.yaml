@@ -11,7 +11,7 @@ cfg:
   min_it_per_knot: 100
   load_initial_sampling_state: True
   use_loaded_mean_only: True
-  ini_dist_path: /home/sunxd/sbto/outputs/G1RobotObjRef/2026_04_21__09_07_04/solver_state_final.npz
+  ini_dist_path: ""
   sigma0: 0.25
   quasi_random: False
   seed: 0

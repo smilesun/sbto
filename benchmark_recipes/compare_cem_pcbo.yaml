@@ -1,0 +1,39 @@
+common_configs:
+  - ../benchmark_common_config/shared_initial_population.yaml
+
+n_samples: 2048
+cooldown_s: 0
+
+base:
+  start_knots: 15
+  N_max_incr: 100
+  motion_path: datasets/robot-object/sub10_largebox_000_original.npz
+  knot_cost_threshold: 1000
+  fall_floor_height: 0.40
+  fall_drop_threshold: 0.25
+  min_it_per_knot: 10
+  load_initial_sampling_state: false
+  adaptive_kappa: true
+  kappa_subsample: 128
+  mixed_init_frac: 0.5
+  warm_start_rundir: outputs/G1RobotObjRef2Delete/2026_04_21__09_07_04
+  save_video: true
+  save_top: 5
+  save_fig: true
+  save_samples_costs: false
+  n_last_it: 1
+
+trials:
+  - solver: cem
+    label: cem_shared_init
+    N_it: 100
+
+  - solver: pcbo
+    label: pcbo_shared_init_trial8
+    N_it: 100
+    scalar_reg: 1.0e6
+    lambda_: 10.0
+    flag_auto_weight: false
+    ini_cov_scale: 10.0
+    use_loaded_mean_only: false
+    mixed_init_frac: 0.5

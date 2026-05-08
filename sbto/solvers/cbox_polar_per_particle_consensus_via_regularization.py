@@ -72,7 +72,7 @@ def compute_per_particle_target_consensus(
         operand=None,
     )
 
-    loss_regularized = - scalar_reg_loss_weight_neighborhood_kernel * \
+    loss_regularized = - scalar_reg_loss_weight_neighborhood_kernel * (1.0 / temperature) * \
         neighborhood_kernel_neg_los_eval \
         - (1.0 / temperature) * costs[:, None]  # broadcast new dimension
 

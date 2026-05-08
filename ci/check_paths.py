@@ -31,7 +31,7 @@ def section(title: str) -> None:
 # ── Critical data files ────────────────────────────────────────────────────────
 section("Critical data files")
 
-WARM_START = REPO / "outputs/G1RobotObjRef/2026_04_21__09_07_04/solver_state_final.npz"
+WARM_START = REPO / "outputs/G1RobotObjRef2Delete/2026_04_21__09_07_04/solver_state_final.npz"
 check("Warm-start solver state (outputs/G1RobotObjRef/...)", WARM_START.exists())
 
 MOTION = REPO / "datasets/robot-object/sub10_largebox_000_original.npz"
@@ -53,48 +53,54 @@ check("data_processing.data_dir == './outputs'",
       dp.get("data_dir") == "./outputs",
       f"got '{dp.get('data_dir')}'")
 
-for solver_yaml in ["sbto/conf/solver/pcbo.yaml", "sbto/conf/solver/cbo.yaml"]:
-    with open(REPO / solver_yaml) as f:
-        cfg = yaml.safe_load(f)
-    ini_path = cfg["cfg"].get("ini_dist_path", "")
-    exists = Path(ini_path).exists() if ini_path else False
-    check(f"{solver_yaml}: ini_dist_path exists", exists, ini_path)
-    check(f"{solver_yaml}: ini_dist_path not in datasets/",
+WARM_START_INI = REPO / "benchmark_volatile_data" / "warm_start_ini.yaml"
+if WARM_START_INI.exists():
+    with open(WARM_START_INI) as f:
+        ws_cfg = yaml.safe_load(f) or {}
+    ini_path = ws_cfg.get("ini_dist_path", "")
+    resolved = (REPO / ini_path) if ini_path and not Path(ini_path).is_absolute() else Path(ini_path)
+    exists = resolved.exists() if ini_path else False
+    check("warm_start_ini.yaml: ini_dist_path exists", exists, ini_path)
+    check("warm_start_ini.yaml: ini_dist_path is relative",
+          not Path(ini_path).is_absolute() if ini_path else True, ini_path)
+    check("warm_start_ini.yaml: ini_dist_path not in datasets/",
           "datasets/G1RobotObjRef" not in ini_path, ini_path)
+else:
+    check("benchmark_volatile_data/warm_start_ini.yaml present", False,
+          "run: uv run python scripts/ensure_warm_start.py")
 
-# ── Benchmark script RESULTS_FILE paths ───────────────────────────────────────
-section("Benchmark script RESULTS_FILE paths")
+# ── Benchmark launcher/config paths ───────────────────────────────────────────
+section("Benchmark launcher/config paths")
 
-SCRIPTS = {
-    "benchmark/launch_benchmark.py":  "benchmark_rst_json_pointers/pcbo_search.json",
-    "benchmark/benchmark_sv_vs_pcbo.py":   "benchmark_rst_json_pointers/benchmark_sv_vs_pcbo.json",
-    "benchmark/benchmark_wishart_cem.py":  "benchmark_rst_json_pointers/benchmark_wishart_cem.json",
-    "benchmark/benchmark_wishart_init.py": "benchmark_rst_json_pointers/benchmark_wishart_init.json",
-    "benchmark/hpsearch_pcbo.py":          "benchmark_rst_json_pointers/hpsearch_pcbo_results.json",
-}
-for script, expected_suffix in SCRIPTS.items():
-    text = (REPO / script).read_text()
-    check(f"{script}: RESULTS_FILE → benchmark_rst_json_pointers/",
-          expected_suffix in text, f"expected '{expected_suffix}'")
+launcher_text = (REPO / "benchmark/launch_benchmark.py").read_text()
+check("launch_benchmark.py: writes benchmark_rst_json_pointers/",
+      "benchmark_rst_json_pointers/" in launcher_text)
+check("launch_benchmark.py: supports wishart population init",
+      "wishart" in launcher_text)
+check("launch_benchmark.py: supports warm_start_full_cov population init",
+      "warm_start_full_cov" in launcher_text)
+check("launch_benchmark.py: supports solver=cem",
+      "solver == \"cem\"" in launcher_text)
 
-POP_SCRIPTS = ["benchmark/benchmark_wishart_init.py", "benchmark/benchmark_wishart_cem.py"]
-for script in POP_SCRIPTS:
-    text = (REPO / script).read_text()
-    check(f"{script}: POP_DIR → benchmark_volatile_data/",
-          "benchmark_volatile_data/wishart_pops" in text)
+for cfg in [
+    "benchmark_recipes/pcbo_search.yaml",
+    "benchmark_recipes/hpsearch_pcbo.yaml",
+    "benchmark_recipes/benchmark_wishart_cem.yaml",
+    "benchmark_recipes/compare_cem_pcbo.yaml",
+    "benchmark_common_config/shared_initial_population.yaml",
+]:
+    check(f"{cfg} present", (REPO / cfg).exists())
 
-for script in ["benchmark/benchmark_sv_vs_pcbo.py", "benchmark/benchmark_wishart_init.py",
-               "benchmark/compare_cem_pcbo.py"]:
-    text = (REPO / script).read_text()
-    check(f"{script}: no datasets/G1RobotObjRef reference",
+for cfg in ["benchmark_recipes/benchmark_wishart_cem.yaml", "benchmark_recipes/compare_cem_pcbo.yaml"]:
+    text = (REPO / cfg).read_text()
+    check(f"{cfg}: no datasets/G1RobotObjRef reference",
           "datasets/G1RobotObjRef" not in text)
 
 # ── Benchmark result JSON files ────────────────────────────────────────────────
 section("Benchmark result JSON files (benchmark_rst_json_pointers/)")
 
 for fname in ["pcbo_search.json", "benchmark_sv_vs_pcbo.json",
-              "benchmark_wishart_cem.json", "benchmark_wishart_init.json",
-              "hpsearch_pcbo_results.json"]:
+              "benchmark_wishart_cem.json", "benchmark_wishart_init.json"]:
     p = REPO / "benchmark_rst_json_pointers" / fname
     check(f"{fname} present", p.exists())
 
@@ -102,7 +108,7 @@ for fname in ["pcbo_search.json", "benchmark_sv_vs_pcbo.json",
 section("Config files")
 
 check("config/plot_knot_config.yaml present", (REPO / "config/plot_knot_config.yaml").exists())
-check("benchmark_config/pcbo_search.yaml present", (REPO / "benchmark_config/pcbo_search.yaml").exists())
+check("benchmark_recipes/pcbo_search.yaml present", (REPO / "benchmark_recipes/pcbo_search.yaml").exists())
 
 text = (REPO / "scripts/plot_knot_distribution.py").read_text()
 check("plot_knot_distribution.py references config/ not scripts/",
@@ -112,7 +118,7 @@ check("plot_knot_distribution.py references config/ not scripts/",
 section("Benchmark dry-run (reads config, builds commands)")
 
 result = subprocess.run(
-    ["uv", "run", "python", "benchmark/launch_benchmark.py", "benchmark_config/pcbo_search.yaml", "--dry-run"],
+    ["uv", "run", "python", "benchmark/launch_benchmark.py", "benchmark_recipes/pcbo_search.yaml", "--dry-run"],
     cwd=REPO, capture_output=True, text=True, timeout=60,
 )
 check("launch_benchmark.py --dry-run exits cleanly",

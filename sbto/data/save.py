@@ -14,7 +14,7 @@ from sbto.utils.plotting import plot_contact_plan, plot_costs, plot_mean_cov, pl
 from sbto.utils.viewer import render_and_save_trajectory
 from sbto.data.utils import solver_state_path_from_rundir, create_dirs
 from sbto.data.postprocess import split_x_traj
-from sbto.data.aggregate import get_top_samples
+from sbto.data.aggregate import get_top_samples, get_top_samples_per_population
 from sbto.data.constants import *
 from sbto.evaluation.trajectory_diversity import (
     save_every_n_iteration_diversity_analysis,
@@ -135,6 +135,7 @@ def save_results(
     fall_floor_height: float = 0.0,
     fall_drop_threshold: float = 0.25,
     result_dir: str = "",
+    num_populations: int = 0,
     ) -> str:
     if not result_dir:
         exp_name = task.__class__.__name__ if not exp_name else exp_name
@@ -250,7 +251,30 @@ def save_results(
             file_path,
             **data_traj
         )
-    
+
+    # Save per-subpopulation top-1 trajectories (SV-CMA-ES)
+    if num_populations > 1 and all_samples.shape[0] > 0:
+        pop_samples, pop_costs, pop_labels = get_top_samples_per_population(
+            last_costs, all_samples, num_populations, k_per_pop=1
+        )
+        if multiple_shooting:
+            x_shooting = task.ref.x[sim.t_knots]
+            _, x_pop, _, _ = map(np.squeeze, sim.rollout_multiple_shooting(pop_samples, x_shooting, with_x0=True))
+        else:
+            _, x_pop, _, _ = map(np.squeeze, sim.rollout(pop_samples, with_x0=True))
+        if x_pop.ndim == 2:
+            x_pop = x_pop[None]
+        pop_data = {
+            KEY_FULL_STATE: x_pop,
+            KEY_COST: pop_costs,
+            "population_index": pop_labels,
+        }
+        for k in remove_keys:
+            pop_data.pop(k, None)
+        file_path = os.path.join(result_dir, "top_trajectories_per_population.npz")
+        np.savez_compressed(file_path, **pop_data)
+        print(f"Saved per-population top-1 trajectories ({num_populations} populations) -> {file_path}")
+
     print(
         "Diversity save debug:",
         f"save_fig={save_fig},",

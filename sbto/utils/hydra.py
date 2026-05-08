@@ -92,6 +92,7 @@ def optimize_and_save_data(
         cfg.data_processing.fall_floor_height,
         cfg.data_processing.fall_drop_threshold,
         result_dir,
+        num_populations=getattr(cfg.solver.cfg, "num_populations", 0),
     )
 
     opt_stats.save(rundir)

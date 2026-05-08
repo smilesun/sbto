@@ -3,17 +3,20 @@
 # Single-element lists = fixed. Multi-element lists = Cartesian product.
 #
 # Generate the trial config:
-#   uv run python benchmark/generate_config.py benchmark_config/grid_search_space.yaml
-#   uv run python benchmark/generate_config.py benchmark_config/grid_search_space.yaml --dry-run
+#   uv run python benchmark/generate_config.py benchmark_hp_space/grid_search_space.yaml
+#   uv run python benchmark/generate_config.py benchmark_hp_space/grid_search_space.yaml --dry-run
 #
 # Then launch:
-#   bash benchmark/launch.sh benchmark_config/grid_generated.yaml
-#   bash benchmark/launch.sh benchmark_config/grid_generated.yaml --resume
+#   bash benchmark/launch.sh benchmark_recipes/grid_generated.yaml
+#   bash benchmark/launch.sh benchmark_recipes/grid_generated.yaml --resume
 #
 # The generated file (grid_generated.yaml) is overwritten each time you run
 # the generator. It is completely separate from the overnight benchmark.
 
-output: benchmark_config/grid_generated.yaml
+output: benchmark_recipes/grid_generated.yaml
+
+common_configs:
+  - ../benchmark_common_config/shared_initial_population.yaml
 
 n_samples: 2048
 cooldown_s: 300
@@ -30,7 +33,7 @@ base:
   adaptive_kappa:       true
   kappa_subsample:      128
   mixed_init_frac:      0.5
-  warm_start_rundir:    outputs/G1RobotObjRef/2026_04_21__09_07_04
+  warm_start_rundir:    outputs/G1RobotObjRef2Delete/2026_04_21__09_07_04
 
 search:
   # ── PCBO ──────────────────────────────────────────────────────────────────

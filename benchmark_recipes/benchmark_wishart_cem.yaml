@@ -1,0 +1,73 @@
+n_samples: 2048
+cooldown_s: 120
+
+base:
+  start_knots: 15
+  N_max_incr: 100
+  motion_path: datasets/robot-object/sub10_largebox_000_original.npz
+  knot_cost_threshold: 1000
+  fall_floor_height: 0.40
+  fall_drop_threshold: 0.25
+  warm_start_rundir: outputs/G1RobotObjRef2Delete/2026_04_21__09_07_04
+  save_video: true
+  save_top: 5
+  save_fig: true
+  save_samples_costs: false
+  n_last_it: 1
+
+trials:
+  - solver: cem
+    label: baseline_cem_equiv
+    N_it: 100
+    population_init: wishart
+    wishart_n_components: 1
+    wishart_cov_scale: 1.0
+    wishart_seed: 0
+
+  - solver: cem
+    label: wishart_k4_s1
+    N_it: 100
+    population_init: wishart
+    wishart_n_components: 4
+    wishart_cov_scale: 1.0
+    wishart_seed: 0
+
+  - solver: cem
+    label: wishart_k8_s1
+    N_it: 100
+    population_init: wishart
+    wishart_n_components: 8
+    wishart_cov_scale: 1.0
+    wishart_seed: 0
+
+  - solver: cem
+    label: wishart_k4_s4
+    N_it: 100
+    population_init: wishart
+    wishart_n_components: 4
+    wishart_cov_scale: 4.0
+    wishart_seed: 0
+
+  - solver: cem
+    label: wishart_k8_s4
+    N_it: 100
+    population_init: wishart
+    wishart_n_components: 8
+    wishart_cov_scale: 4.0
+    wishart_seed: 0
+
+  - solver: cem
+    label: wishart_k4_s16
+    N_it: 100
+    population_init: wishart
+    wishart_n_components: 4
+    wishart_cov_scale: 16.0
+    wishart_seed: 0
+
+  - solver: cem
+    label: wishart_k8_s16
+    N_it: 100
+    population_init: wishart
+    wishart_n_components: 8
+    wishart_cov_scale: 16.0
+    wishart_seed: 0

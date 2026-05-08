@@ -1,0 +1,44 @@
+# PCBO benchmark with random initialization (no CEM warm-start), N=16384 particles.
+# Sweeps sigma0, lambda_, and beta to explore the random-init landscape.
+#
+# Generate:
+#   uv run python benchmark/generate_config.py benchmark_hp_space/pcbo_random_init_search_space.yaml
+#
+# Launch:
+#   uv run python benchmark/launch_benchmark.py benchmark_recipes/pcbo_random_init.yaml
+
+output: benchmark_recipes/pcbo_random_init.yaml
+
+n_samples: 16384
+cooldown_s: 120
+
+base:
+  start_knots: 15
+  N_max_incr: 100
+  motion_path: datasets/robot-object/sub10_largebox_000_original.npz
+  knot_cost_threshold: 1000
+  fall_floor_height: 0.40
+  fall_drop_threshold: 0.25
+  min_it_per_knot: 10
+  load_initial_sampling_state: false
+  adaptive_kappa: true
+  kappa_subsample: 128
+  mixed_init_frac: 0.5
+  save_video: true
+  save_top: 5
+  save_fig: true
+  save_samples_costs: false
+  n_last_it: 1
+
+search:
+  # ── PCBO random init sweep ─────────────────────────────────────────────────
+  # sigma0 × lambda_ × beta: 3 × 2 × 2 = 12 trials
+  pcbo:
+    beta:                [1.0e8, 1.0e10]
+    scalar_reg:          [1.0e6]
+    lambda_:             [1.0, 10.0]
+    flag_auto_weight:    [false]
+    ini_cov_scale:       [1.0]
+    use_loaded_mean_only: [false]
+    sigma0:              [0.1, 0.25, 0.5]
+    N_it:                [100]

@@ -8,19 +8,19 @@ All commands are run from the **repository root** (`/home/sunxd/sbto`).
 
 ```bash
 # Fresh run
-bash benchmark/launch.sh benchmark_config/pcbo_search.yaml
+bash benchmark/launch.sh benchmark_recipes/pcbo_search.yaml
 
 # Resume — skip trials that already have results
-bash benchmark/launch.sh benchmark_config/pcbo_search.yaml --resume
+bash benchmark/launch.sh benchmark_recipes/pcbo_search.yaml --resume
 
 # Overnight SV-CMA-ES vs PCBO search
-bash benchmark/launch.sh benchmark_config/overnight_sv_vs_pcbo.yaml
+bash benchmark/launch.sh benchmark_recipes/overnight_sv_vs_pcbo.yaml
 ```
 
 Or run the Python script directly (output goes to terminal instead of log file):
 
 ```bash
-uv run python benchmark/launch_benchmark.py benchmark_config/pcbo_search.yaml --resume
+uv run python benchmark/launch_benchmark.py benchmark_recipes/pcbo_search.yaml --resume
 ```
 
 Results are saved incrementally to `benchmark_rst_json_pointers/pcbo_search.json`
@@ -42,7 +42,7 @@ log file.
 
 ## Edit the PCBO search configuration
 
-Open **`benchmark_config/pcbo_search.yaml`** and edit the `trials` list.
+Open **`benchmark_recipes/pcbo_search.yaml`** and edit the `trials` list.
 
 ### Common settings (top of the file)
 
@@ -93,7 +93,7 @@ bash benchmark/launch_pcbo_search.sh --resume
 
 | Path | Contents |
 |------|----------|
-| `benchmark_config/pcbo_search.yaml` | Editable trial configuration |
+| `benchmark_recipes/pcbo_search.yaml` | Runnable sequential trial recipe |
 | `benchmark_rst_json_pointers/pcbo_search.json` | JSON results (written after each trial) |
 | `benchmark_logs/pcbo_search.log` | Full stdout/stderr from the running benchmark |
 | `outputs/G1RobotObjRef/<timestamp>_pcbo_search_<label>/` | Per-trial output: videos, plots, solver state |
@@ -106,12 +106,14 @@ These ran once and are kept for reference. Results are in `benchmark_rst_json_po
 
 | Script | What it tested | Results file |
 |--------|---------------|--------------|
-| `benchmark/hpsearch_pcbo.py` | PCBO hyperparameter grid (11 trials) | `hpsearch_pcbo_results.json` |
+| `benchmark_recipes/hpsearch_pcbo.yaml` | PCBO hyperparameter grid (11 trials) | `hpsearch_pcbo.json` |
 | `benchmark/benchmark_sv_vs_pcbo.py` | SV-CMA-ES vs PCBO with CEM warm-start | `benchmark_sv_vs_pcbo.json` |
 | `benchmark/benchmark_wishart_init.py` | PCBO with zero-mean Wishart init (no warm-start) | `benchmark_wishart_init.json` |
-| `benchmark/benchmark_wishart_cem.py` | CEM with zero-mean Wishart init (no warm-start) | `benchmark_wishart_cem.json` |
+| `benchmark_recipes/benchmark_wishart_cem.yaml` | CEM with zero-mean Wishart init (no warm-start) | `benchmark_wishart_cem.json` |
+| `benchmark_recipes/compare_cem_pcbo.yaml` | CEM vs PCBO from the same saved initial population | `compare_cem_pcbo.json` |
 
-To re-run any of them: `uv run python <script> --resume`
+To re-run any config-backed benchmark:
+`uv run python benchmark/launch_benchmark.py benchmark_recipes/<config>.yaml --resume`
 
 ---
 

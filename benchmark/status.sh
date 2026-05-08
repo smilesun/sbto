@@ -5,6 +5,18 @@
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BENCHMARK_DIR="$REPO_ROOT/benchmark_rst_json_pointers"
 
+pretty_label() {
+    case "$1" in
+        pcbo_search) echo "PCBO Search" ;;
+        hpsearch_pcbo) echo "HP Search PCBO" ;;
+        benchmark_wishart_cem) echo "Benchmark Wishart CEM" ;;
+        benchmark_wishart_init) echo "Benchmark Wishart Init" ;;
+        benchmark_sv_vs_pcbo) echo "Benchmark SV vs PCBO" ;;
+        compare_cem_pcbo) echo "Compare CEM vs PCBO" ;;
+        *) echo "$1" ;;
+    esac
+}
+
 print_json() {
     local label="$1"
     local file="$2"
@@ -39,7 +51,8 @@ if [ ${#json_files[@]} -eq 0 ]; then
     echo "(no result files in $BENCHMARK_DIR)"
 else
     for f in "${json_files[@]}"; do
-        print_json "$(basename "$f" .json)" "$f"
+        stem="$(basename "$f" .json)"
+        print_json "$(pretty_label "$stem")" "$f"
     done
 fi
 

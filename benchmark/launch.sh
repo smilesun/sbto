@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Generic background benchmark launcher.
 # Usage (from repo root):
-#   bash benchmark/launch.sh benchmark_config/overnight_sv_vs_pcbo.yaml
-#   bash benchmark/launch.sh benchmark_config/pcbo_search.yaml --resume
+#   bash benchmark/launch.sh benchmark_recipes/overnight_sv_vs_pcbo.yaml
+#   bash benchmark/launch.sh benchmark_recipes/pcbo_search.yaml --resume
 
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"

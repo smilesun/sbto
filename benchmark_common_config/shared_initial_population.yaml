@@ -1,0 +1,12 @@
+# Enforce identical initial particle populations across multi-solver comparisons.
+# Include this file through `common_configs:` in either benchmark_hp_space or
+# benchmark_recipes YAMLs.
+
+policies:
+  shared_initial_population:
+    enabled: true
+    min_solver_count: 2
+    population_init: warm_start_full_cov
+    population_init_key: shared_initial_population
+    population_init_cov_scale: 10.0
+    population_init_seed: 0

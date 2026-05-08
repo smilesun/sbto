@@ -11,11 +11,14 @@
 # SV-CMA-ES: num_populations, kernel_std, alpha  (7 trials)
 #
 # Launch:
-#   bash benchmark/launch.sh benchmark_config/overnight_sv_vs_pcbo.yaml
-#   bash benchmark/launch.sh benchmark_config/overnight_sv_vs_pcbo.yaml --resume
+#   bash benchmark/launch.sh benchmark_recipes/overnight_sv_vs_pcbo.yaml
+#   bash benchmark/launch.sh benchmark_recipes/overnight_sv_vs_pcbo.yaml --resume
 #
 # Results: benchmark_rst_json_pointers/overnight_sv_vs_pcbo.json
 # Estimated runtime: ~18 hours (30 trials × ~35 min/trial + 5 min cooldown)
+
+common_configs:
+  - ../benchmark_common_config/shared_initial_population.yaml
 
 n_samples: 2048
 cooldown_s: 300          # 5 min GPU cooldown between trials
@@ -42,7 +45,7 @@ base:
 
   # ── SV-CMA-ES warm-start: load CEM mean from this run directory ─────────────
   # (PCBO warm-start uses ini_dist_path configured in sbto/conf/solver/pcbo.yaml)
-  warm_start_rundir:    outputs/G1RobotObjRef/2026_04_21__09_07_04
+  warm_start_rundir:    outputs/G1RobotObjRef2Delete/2026_04_21__09_07_04
   # save_samples_costs + n_last_it are set in launch_benchmark.py (true, 1 last iter ~54 MB/trial)
 
 trials:

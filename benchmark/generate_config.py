@@ -8,9 +8,9 @@ values actually vary; single-element lists are fixed). Writes a flat
 trial list that launch_benchmark.py can consume directly.
 
 Usage:
-    uv run python benchmark/generate_config.py benchmark_config/grid_search_space.yaml
-    uv run python benchmark/generate_config.py benchmark_config/grid_search_space.yaml --output benchmark_config/my_run.yaml
-    uv run python benchmark/generate_config.py benchmark_config/grid_search_space.yaml --dry-run
+    uv run python benchmark/generate_config.py benchmark_hp_space/grid_search_space.yaml
+    uv run python benchmark/generate_config.py benchmark_hp_space/grid_search_space.yaml --output benchmark_recipes/my_run.yaml
+    uv run python benchmark/generate_config.py benchmark_hp_space/grid_search_space.yaml --dry-run
 
 The output path can also be set via the `output` key in the search space YAML.
 """
@@ -22,6 +22,8 @@ import sys
 from pathlib import Path
 
 import yaml
+
+from common_config import apply_common_policies, load_yaml_with_common_configs
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -121,11 +123,10 @@ def _float_representer(dumper, data):
 
 
 def generate(space_file: Path, output_override: Path | None, dry_run: bool) -> None:
-    with open(space_file) as f:
-        space = yaml.safe_load(f)
+    space = load_yaml_with_common_configs(space_file)
 
     out_path = output_override or REPO_ROOT / space.get(
-        "output", "benchmark_config/grid_generated.yaml"
+        "output", "benchmark_recipes/grid_generated.yaml"
     )
     if not out_path.is_absolute():
         out_path = REPO_ROOT / out_path
@@ -163,8 +164,12 @@ def generate(space_file: Path, output_override: Path | None, dry_run: bool) -> N
         "n_samples": space.get("n_samples", 2048),
         "cooldown_s": space.get("cooldown_s", 300),
         "base": space["base"],
+        "policies": space.get("policies", {}),
         "trials": all_trials,
     }
+    if "results_file" in space:
+        cfg["results_file"] = space["results_file"]
+    cfg = apply_common_policies(cfg)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     header = (
@@ -184,7 +189,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Generate a benchmark config from a search-space YAML."
     )
-    parser.add_argument("space", help="Search space YAML (e.g. benchmark_config/grid_search_space.yaml)")
+    parser.add_argument("space", help="Search space YAML (e.g. benchmark_hp_space/grid_search_space.yaml)")
     parser.add_argument("--output", default=None, help="Override output path")
     parser.add_argument("--dry-run", action="store_true", help="Print trial count without writing")
     args = parser.parse_args()
